@@ -1,0 +1,30 @@
+\section{Fonctionnement de \texorpdfstring{\taub}{tau2-bench}}
+\label{sec:benchmark}
+
+\subsection{Une simulation à trois acteurs}
+
+Chaque épisode met en jeu trois composants, coordonnés par un \emph{orchestrateur} qui fait alterner les tours de parole :
+\begin{description}[nosep]
+  \item[L'agent évalué] est un LLM. Son prompt système contient la \emph{politique} du domaine, un document en langue naturelle qui fixe les règles métier. Il reçoit aussi la description des outils qu'il peut appeler.
+  \item[L'utilisateur simulé] est un autre LLM. Il suit un scénario que l'agent ne voit pas : persona, motif de l'appel, informations connues ou inconnues, consignes de comportement (par exemple « insister », « ne pas accepter la première offre »).
+  \item[L'environnement] est une base de données en mémoire propre au domaine (réservations, commandes, lignes téléphoniques\ldots). Les outils sont des fonctions Python déterministes qui la lisent ou la modifient.
+\end{description}
+L'épisode se termine quand l'utilisateur émet un signal d'arrêt (fin de conversation, transfert vers un humain) ou quand le nombre maximal de tours est atteint.
+
+\todo{Figure : schéma agent / utilisateur / environnement / orchestrateur.}
+
+\subsection{Le cadre \emph{dual-control}}
+
+Dans $\tau$-bench, seul l'agent agit sur l'environnement : l'utilisateur ne fait que fournir des informations. \taub{} ajoute un domaine (\texttt{telecom}) où l'utilisateur possède ses propres outils, qui simulent son téléphone : redémarrer, activer les données mobiles, vérifier le mode avion, etc. Il dispose aussi d'un état propre, une seconde base de données. L'agent ne voit pas cet état et ne peut pas agir dessus : il doit obtenir de l'utilisateur qu'il effectue les bonnes actions et lui rapporte les bonnes observations. Les auteurs formalisent ce cadre comme un Dec-POMDP \cite{barres2025tau2}.
+\todo{Vérifier dans l'article la formalisation exacte et la reformuler.}
+
+\subsection{Métrique : \texorpdfstring{$\passk{k}$}{pass\^{}k}}
+
+Chaque essai d'une tâche reçoit une récompense binaire $r \in \{0,1\}$ (section~\ref{sec:evaluation}). On exécute chaque tâche $n$ fois. Si une tâche obtient $c$ succès, l'estimateur non biaisé de la probabilité que $k$ essais indépendants réussissent \emph{tous} est
+\begin{equation}
+  \passk{k} = \mathbb{E}_{\text{tâches}}\left[\frac{\binom{c}{k}}{\binom{n}{k}}\right], \qquad k \le n.
+\end{equation}
+$\passk{1}$ est le taux de succès moyen. Contrairement à pass@$k$ (au moins un succès parmi $k$), $\passk{k}$ décroît avec $k$ : cette métrique mesure la \emph{fiabilité} de l'agent, une exigence centrale pour un agent déployé face à des clients.
+
+\subsection{Modes d'exécution}
+\todo{Décrire les modes (conversation standard, \emph{solo}/no-user, plan oracle) et ce que leur comparaison permet d'isoler : raisonnement ou coordination avec l'utilisateur. Vérifier les noms exacts dans \texttt{docs/cli-reference.md}.}

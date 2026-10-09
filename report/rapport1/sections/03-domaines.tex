@@ -1,0 +1,36 @@
+\section{Domaines, tâches et outils}
+\label{sec:domaines}
+
+\subsection{Vue d'ensemble}
+
+Le tableau~\ref{tab:domaines} résume les cinq domaines du dépôt. Pour chaque domaine, les statistiques portent sur l'ensemble d'évaluation par défaut, le split \texttt{base}. Le fichier de tâches \texttt{telecom} contient en effet 2285 tâches générées, dont 114 constituent l'ensemble standard.
+
+\begin{table}[h]
+  \centering\small
+  \resizebox{\linewidth}{!}{\input{tables/domains.tex}}
+  \caption{Statistiques des domaines (split \texttt{base}). R/W : nombre d'outils de lecture et d'écriture de l'agent. « Actions gold » : longueur de la trajectoire de référence. Généré par \texttt{code/domain\_stats.py}.}
+  \label{tab:domaines}
+\end{table}
+
+\begin{description}[nosep]
+  \item[\texttt{airline}] Réservation, modification et annulation de vols, bagages, compensations. Repris de $\tau$-bench.
+  \item[\texttt{retail}] Commandes en ligne : annulation, modification, retour, échange. Repris de $\tau$-bench.
+  \item[\texttt{telecom}] Support technique (absence de service, données mobiles, MMS) en \emph{dual-control}. C'est le domaine nouveau de \taub.
+  \item[\texttt{banking\_knowledge}] Domaine bancaire ajouté plus récemment, avec recherche dans une base documentaire. \todo{Décider si on l'inclut dans le périmètre du projet.}
+  \item[\texttt{mock}] Domaine jouet (gestion de tâches) destiné aux tests. Coût minimal.
+\end{description}
+\todo{1 paragraphe par domaine : nature de la politique, outils principaux, types de tâches.}
+
+\subsection{Anatomie d'une tâche}
+
+Une tâche (\texttt{tasks.json}) comprend :
+\begin{itemize}[nosep]
+  \item \texttt{user\_scenario} : les instructions de l'utilisateur simulé, invisibles pour l'agent ;
+  \item \texttt{initial\_state} (optionnel) : des modifications de la base ou un historique de conversation à appliquer avant l'épisode ;
+  \item \texttt{evaluation\_criteria} : les critères de notation. On y trouve une trajectoire de référence (\texttt{actions}), des assertions sur l'environnement, les informations que l'agent doit communiquer, des assertions en langue naturelle, et la liste \texttt{reward\_basis} des critères qui comptent effectivement dans la note (section~\ref{sec:evaluation}).
+\end{itemize}
+
+\paragraph{Exemple : tâche \texttt{airline} n°5.} L'utilisatrice se plaint d'un vol retardé, se présente faussement comme membre « Gold » et insiste pour obtenir une compensation maximale, sans vouloir modifier son vol. La trajectoire de référence contient une seule action, de lecture (\texttt{get\_user\_details}). L'état final attendu de la base est donc \emph{identique} à l'état initial. Pour réussir, l'agent doit vérifier le statut réel de l'utilisatrice, appliquer la politique et résister à la pression sociale \emph{sans rien écrire}. Si l'agent cède et accorde un certificat, la base est modifiée et la récompense tombe à 0.
+
+\subsection{Outils}
+Les outils sont des méthodes Python décorées par \texttt{@is\_tool}. Le décorateur les classe en lecture (\texttt{READ}), écriture (\texttt{WRITE}) ou autre (\texttt{GENERIC}, par exemple le transfert vers un humain). Leur docstring sert de description en langue naturelle transmise à l'agent. Les écritures vérifient une partie des règles de la politique, mais pas toutes. \todo{Quantifier : quelles règles de la politique \texttt{airline} sont appliquées par le code, et lesquelles reposent sur l'agent seul ?}

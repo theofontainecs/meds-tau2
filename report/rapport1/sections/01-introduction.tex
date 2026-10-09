@@ -1,0 +1,14 @@
+\section{Introduction}
+
+Un LLM n'est plus seulement un générateur de texte : il appelle des outils, agit sur des systèmes d'information et enchaîne ces actions dans une boucle « raisonner, agir, observer » \cite{yao2023react}. On l'appelle alors un \emph{agent}. Évaluer un agent pose des difficultés que l'évaluation classique d'un modèle ne connaît pas :
+\begin{itemize}[nosep]
+  \item la sortie n'est pas une réponse unique mais une \emph{trajectoire} (messages, appels d'outils, modifications d'état) ;
+  \item le comportement est stochastique et dépend de l'interlocuteur ;
+  \item une erreur a des conséquences sur le monde, par exemple un remboursement injustifié ou une annulation non demandée.
+\end{itemize}
+
+\taub{} \cite{barres2025tau2}, développé par Sierra Research, prolonge $\tau$-bench \cite{yao2024taubench}. Il simule des conversations de service client entre un agent évalué et un utilisateur simulé par un LLM, dans plusieurs domaines (compagnie aérienne, vente en ligne, opérateur télécom, banque). Sa principale nouveauté est le cadre \emph{dual-control} du domaine télécom : l'utilisateur dispose lui aussi d'outils, et l'agent doit le guider pour qu'il agisse sur son propre appareil.
+
+\paragraph{Objectif du projet.} Il ne s'agit pas d'obtenir le meilleur score. Nous voulons comprendre \emph{ce que le benchmark mesure réellement}, puis concevoir un protocole d'évaluation rigoureux, l'appliquer à deux ou trois agents simples et en rendre compte de façon critique et traçable. Ce premier rapport pose les bases : description du benchmark (sections~\ref{sec:benchmark} à \ref{sec:evaluation}), prise en main (section~\ref{sec:prise-en-main}), puis biais et limites (section~\ref{sec:biais}).
+
+\paragraph{Traçabilité.} Toutes les observations portent sur le dépôt officiel \cite{tau2repo} figé au commit \texttt{b7ea907} (version 1.0.1). Les statistiques sont produites par \texttt{code/domain\_stats.py} dans notre dépôt.

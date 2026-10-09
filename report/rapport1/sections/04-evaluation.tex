@@ -1,0 +1,21 @@
+\section{Mécanisme de notation}
+\label{sec:evaluation}
+
+La récompense d'un essai est le \emph{produit} des composantes listées dans \texttt{reward\_basis}. Il suffit qu'une seule échoue pour que la récompense soit nulle. Les composantes possibles sont les suivantes.
+
+\begin{description}[nosep]
+  \item[\texttt{DB}] On rejoue les appels d'outils de l'agent sur une base initiale vierge pour obtenir une base « prédite ». On exécute la trajectoire de référence sur une autre copie pour obtenir une base « gold ». On compare ensuite le \emph{hash} des deux bases. Seul l'\emph{état final} compte, et toute trajectoire qui y mène est acceptée.
+  \item[\texttt{ENV\_ASSERTION}] Des prédicats évalués sur l'environnement final, par exemple « le téléphone a les données mobiles activées ».
+  \item[\texttt{COMMUNICATE}] Chaque chaîne de \texttt{communicate\_info} doit apparaître dans les messages de l'agent. La correspondance est une simple recherche de sous-chaîne.
+  \item[\texttt{NL\_ASSERTION}] Un juge LLM vérifie des assertions en langue naturelle sur la conversation. La documentation présente cette composante comme expérimentale.
+  \item[\texttt{ACTION}] Chaque action de référence doit figurer parmi les appels de l'agent. Cela suppose que la trajectoire de référence est la seule correcte.
+\end{description}
+
+\paragraph{Écart entre documentation et données.} La documentation du dépôt indique que la valeur par défaut \texttt{[DB, COMMUNICATE]} s'applique aux domaines \texttt{airline}, \texttt{retail} et \texttt{telecom}. Elle précise aussi que \texttt{ACTION} n'y est pas utilisée. Les fichiers de tâches disent autre chose (tableau~\ref{tab:domaines}) :
+\begin{itemize}[nosep]
+  \item en \texttt{retail}, 112 tâches sur 114 sont notées sur \texttt{DB+NL\_ASSERTION}. Comme une liste d'assertions vide vaut 1, le juge LLM n'intervient effectivement que sur les 40 tâches qui en contiennent ;
+  \item en \texttt{telecom}, aucune tâche n'utilise \texttt{DB} : la note repose sur \texttt{ENV\_ASSERTION}, et 20 tâches sur 114 utilisent aussi \texttt{ACTION} ;
+  \item seul \texttt{airline} suit la valeur par défaut.
+\end{itemize}
+Concrètement, \emph{un même score $\passk{1}$ ne recouvre donc pas la même notion de succès selon le domaine}.
+\todo{Vérifier dans le code si \texttt{reward\_basis} est surchargé à l'exécution, par exemple par une option CLI.}

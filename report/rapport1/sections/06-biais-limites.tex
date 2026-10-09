@@ -1,0 +1,41 @@
+\section{Biais et limites du benchmark}
+\label{sec:biais}
+
+Nous reprenons la grille du cours sur le protocole expérimental : un score n'a de sens qu'avec les choix qui le produisent (données, découpage, mesure), et ces choix sont autant de sources de biais. \todo{Pour chaque point : un exemple concret tiré des données, et une piste de vérification expérimentale pour le rapport 2.}
+
+\subsection{Ce que la récompense capture, et ce qu'elle ignore}
+\begin{itemize}
+  \item \textbf{Un score centré sur l'état final.} La composante \texttt{DB} ne juge que l'effet sur la base. Deux comportements très différents, par exemple un refus courtois et justifié ou un refus accompagné d'une information fausse, obtiennent la même note s'ils ne modifient rien. Dans la tâche \texttt{airline}~5, les assertions qui portent justement sur ce comportement (« l'agent identifie que l'utilisatrice n'est pas Gold ») ne font pas partie de \texttt{reward\_basis}.
+  \item \textbf{Une seule solution de référence.} L'état final attendu est obtenu en rejouant \emph{une} trajectoire. Si la politique admet plusieurs issues légitimes, une seule est acceptée.
+  \item \textbf{Une notation binaire et multiplicative.} Le score ne mesure ni le coût, ni la latence, ni le nombre de tours, ni la qualité de la conversation, ni la gravité de l'erreur. Une erreur bénigne compte autant qu'une action irréversible non autorisée.
+  \item \textbf{Une notion de succès différente selon les domaines} (section~\ref{sec:evaluation}) : \texttt{DB+COMMUNICATE} en \texttt{airline}, juge LLM sur une partie des tâches \texttt{retail}, assertions d'environnement en \texttt{telecom}. Agréger les domaines dans un score unique mélange donc des grandeurs différentes.
+  \item \textbf{Des composantes fragiles.} \texttt{COMMUNICATE} repose sur une recherche de sous-chaîne, sensible au format des nombres par exemple. \texttt{NL\_ASSERTION} dépend d'un juge LLM, avec ses propres biais et sa propre variance.
+\end{itemize}
+
+\subsection{L'utilisateur simulé}
+\begin{itemize}
+  \item \textbf{Une source de bruit qui n'est pas imputable à l'agent.} L'utilisateur est un LLM : il peut oublier ses consignes, révéler trop tôt une information, céder, ou terminer la conversation prématurément. Une partie des échecs mesurés vient donc du simulateur.
+  \item \textbf{Le choix du modèle utilisateur fait partie du protocole.} Changer de modèle utilisateur change la difficulté. Deux scores obtenus avec des utilisateurs différents ne sont pas comparables.
+  \item \textbf{Un réalisme limité.} Les personas sont stéréotypés. Le simulateur ne reproduit ni la diversité linguistique et culturelle, ni l'impatience, ni les erreurs de saisie d'un vrai client.
+\end{itemize}
+
+\subsection{Validité des tâches}
+\begin{itemize}
+  \item \textbf{Des tâches erronées.} La version 1.0 du dépôt corrige 27 tâches \texttt{airline} et 26 tâches \texttt{retail} : actions attendues incorrectes, consignes ambiguës, contraintes impossibles, failles de la politique \cite{tau2repo}. Plus d'un tiers des tâches de ces domaines étaient donc défectueuses. Les scores publiés avant cette correction sont biaisés, et rien ne garantit que toutes les erreurs ont été trouvées.
+  \item \textbf{Une documentation qui ne correspond pas aux données} sur la composition de \texttt{reward\_basis} (section~\ref{sec:evaluation}).
+  \item \textbf{Une politique partiellement appliquée par le code.} Certaines règles sont vérifiées par les outils et ne peuvent donc pas être violées. D'autres reposent uniquement sur le jugement de l'agent. Le benchmark mesure surtout ces dernières. \todo{À quantifier.}
+\end{itemize}
+
+\subsection{Validité statistique}
+\begin{itemize}
+  \item \textbf{Des échantillons petits.} Avec 50 tâches (\texttt{airline}), l'erreur standard d'un taux de succès autour de 50\,\% vaut environ $\sqrt{0.25/50} \approx 7$ points, avant même de compter la variance entre essais. Beaucoup d'écarts du classement ne sont probablement pas significatifs.
+  \item \textbf{Deux sources de variance.} La variance vient à la fois de la stochasticité de l'agent \emph{et} de celle de l'utilisateur. Le nombre d'essais $n$ et le $k$ retenu pour $\passk{k}$ sont des choix de protocole.
+  \item \textbf{Des splits train/test récents} (v0.2.1). Les résultats antérieurs portent sur l'ensemble complet.
+\end{itemize}
+
+\subsection{Représentativité et contamination}
+\begin{itemize}
+  \item Les domaines sont synthétiques, en anglais, et calqués sur des processus américains. Les politiques sont simplifiées par rapport à de vraies procédures.
+  \item Les tâches, les politiques et les trajectoires sont publiques depuis 2024--2025. Elles ont donc pu entrer dans les données d'entraînement des modèles récents (contamination).
+  \item Les acteurs qui publient des scores, y compris les fournisseurs de modèles, sont aussi ceux qui ont intérêt à les optimiser.
+\end{itemize}

@@ -1,0 +1,138 @@
+{
+  "tau2_commit": "b7ea907",
+  "domains": {
+    "mock": {
+      "n_tasks_file": 10,
+      "n_tasks": 10,
+      "tasks_llm_judged": 0,
+      "splits": {
+        "base": 10
+      },
+      "agent_tools": {
+        "WRITE": 2,
+        "READ": 1,
+        "GENERIC": 1
+      },
+      "n_agent_tools": 4,
+      "n_user_tools": 2,
+      "policy_words": 52,
+      "reward_basis": {
+        "DB+COMMUNICATE": 6,
+        "DB+ENV_ASSERTION": 1,
+        "ENV_ASSERTION": 1,
+        "DB+ACTION+ENV_ASSERTION": 1,
+        "DB+ACTION": 1
+      },
+      "mean_gold_actions": 0.8,
+      "max_gold_actions": 1,
+      "tasks_without_gold_actions": 2,
+      "tasks_with_communicate_info": 1,
+      "tasks_with_nl_assertions": 8
+    },
+    "airline": {
+      "n_tasks_file": 50,
+      "n_tasks": 50,
+      "tasks_llm_judged": 0,
+      "splits": {
+        "train": 30,
+        "test": 20,
+        "base": 50
+      },
+      "agent_tools": {
+        "WRITE": 6,
+        "GENERIC": 2,
+        "READ": 6
+      },
+      "n_agent_tools": 14,
+      "n_user_tools": 0,
+      "policy_words": 1313,
+      "reward_basis": {
+        "DB+COMMUNICATE": 50
+      },
+      "mean_gold_actions": 2.84,
+      "max_gold_actions": 19,
+      "tasks_without_gold_actions": 7,
+      "tasks_with_communicate_info": 6,
+      "tasks_with_nl_assertions": 50
+    },
+    "retail": {
+      "n_tasks_file": 114,
+      "n_tasks": 114,
+      "tasks_llm_judged": 40,
+      "splits": {
+        "train": 74,
+        "test": 40,
+        "base": 114
+      },
+      "agent_tools": {
+        "GENERIC": 2,
+        "WRITE": 7,
+        "READ": 7
+      },
+      "n_agent_tools": 16,
+      "n_user_tools": 0,
+      "policy_words": 1158,
+      "reward_basis": {
+        "DB+NL_ASSERTION": 112,
+        "DB": 2
+      },
+      "mean_gold_actions": 4.82,
+      "max_gold_actions": 13,
+      "tasks_without_gold_actions": 2,
+      "tasks_with_communicate_info": 36,
+      "tasks_with_nl_assertions": 40
+    },
+    "telecom": {
+      "n_tasks_file": 2285,
+      "n_tasks": 114,
+      "tasks_llm_judged": 0,
+      "splits": {
+        "small": 20,
+        "train": 74,
+        "test": 40,
+        "full": 2285,
+        "base": 114
+      },
+      "agent_tools": {
+        "READ": 6,
+        "WRITE": 6,
+        "GENERIC": 1
+      },
+      "n_agent_tools": 13,
+      "n_user_tools": 30,
+      "policy_words": 3711,
+      "reward_basis": {
+        "ENV_ASSERTION": 94,
+        "ENV_ASSERTION+ACTION": 20
+      },
+      "mean_gold_actions": 4.53,
+      "max_gold_actions": 12,
+      "tasks_without_gold_actions": 0,
+      "tasks_with_communicate_info": 0,
+      "tasks_with_nl_assertions": 0
+    },
+    "banking_knowledge": {
+      "n_tasks_file": 97,
+      "n_tasks": 97,
+      "tasks_llm_judged": 0,
+      "splits": {},
+      "agent_tools": {
+        "GENERIC": 1,
+        "READ": 9,
+        "WRITE": 8
+      },
+      "n_agent_tools": 18,
+      "n_user_tools": 0,
+      "policy_words": null,
+      "reward_basis": {
+        "DB": 88,
+        "ACTION": 9
+      },
+      "mean_gold_actions": 9.85,
+      "max_gold_actions": 37,
+      "tasks_without_gold_actions": 0,
+      "tasks_with_communicate_info": 0,
+      "tasks_with_nl_assertions": 0
+    }
+  }
+}
