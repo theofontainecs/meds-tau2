@@ -1,10 +1,11 @@
 # Projet MEDS — Évaluation des agents avec τ²-bench
 
-Projet du cours MEDS (M2 MIND, Sorbonne Université, partie « méthodologie projet », O. Schwander).
+Projet du cours MEDS, partie « méthodologie projet », O. Schwander.
 Le but n'est pas d'obtenir le meilleur score sur [τ²-bench](https://github.com/sierra-research/tau2-bench) : il s'agit d'étudier **ce que le benchmark mesure vraiment**, puis de concevoir un protocole d'évaluation rigoureux et de l'appliquer à 2 ou 3 agents simples.
+
 Sujet : <https://schwander.isir.upmc.fr/enseignement/m2mind_meds/projet.html>
 
-**Groupe :** _NOM DU GROUPE_ — _Prénom Nom_, _Prénom Nom_, _Prénom Nom_
+**Groupe :** _Théo Fontaine_, _Jean-Léo Serrano_
 
 | Rendu | Échéance | Contenu |
 |---|---|---|
@@ -12,7 +13,6 @@ Sujet : <https://schwander.isir.upmc.fr/enseignement/m2mind_meds/projet.html>
 | Rapport 2 | mi-novembre 2026 | + questions de recherche, protocole, expériences proposées |
 | Rapport final | fin novembre 2026 | + résultats, analyse, pistes d'amélioration, limites, conclusion |
 
-Les rapports se rendent **en PDF uniquement**, sans code, via le lien de dépôt indiqué pour chaque rendu, avec le nom du groupe dans le nom du fichier.
 
 ## Organisation du dépôt
 
@@ -32,14 +32,14 @@ Pour changer de version, il faut le faire **explicitement** (`git -C third_party
 ## Installation
 
 ```bash
-git clone --recurse-submodules <url-de-ce-repo>
+git clone -c core.longpaths=true --recurse-submodules https://github.com/theofontainecs/meds-tau2.git   # longpaths : requis sous Windows
 cd meds-tau2/third_party/tau2-bench
 uv sync
 uv pip install websockets   # contournement : la version core importe un module vocal non déclaré
 uv run --no-sync tau2 --help
 ```
 
-Clé API : chaque membre crée sa propre clé (voir Mattermost). On la met dans `third_party/tau2-bench/.env`, fichier ignoré par git :
+Clé API dans `third_party/tau2-bench/.env`, fichier ignoré par git :
 
 ```
 OPENAI_BASE_URL=https://litellm.isir.upmc.fr
@@ -60,7 +60,6 @@ uv run --no-sync tau2 view
 
 Les simulations sont écrites dans `third_party/tau2-bench/data/simulations/`, qui est ignoré par git. **Copiez dans `results/` celles que vous citez dans un rapport**, en notant la commande exacte utilisée.
 
-Budget : 3 $ par clé au départ. On teste sur `mock` avant tout lancement sur un vrai domaine.
 
 ## Compiler le rapport
 
@@ -68,5 +67,3 @@ Budget : 3 $ par clé au départ. On teste sur `mock` avant tout lancement sur u
 cd report/rapport1
 latexmk main.tex           # PDF produit dans build/main.pdf
 ```
-
-Les notes `\todo{...}` s'affichent en rouge. Pour la version à rendre, passez `\notesfalse` dans `main.tex`.
