@@ -8,7 +8,7 @@ Le tableau~\ref{tab:domaines} résume les cinq domaines du dépôt. Pour chaque 
 \begin{table}[h]
   \centering\small
   \resizebox{\linewidth}{!}{\input{tables/domains.tex}}
-  \caption{Statistiques des domaines (split \texttt{base}). R/W : nombre d'outils de lecture et d'écriture de l'agent. « Mots politique » : longueur de la politique fournie à l'agent. « Actions gold » : longueur de la trajectoire de référence. « Gold sans écriture » : tâches dont la trajectoire de référence ne contient aucun outil d'écriture. « Réussies par agent passif » : tâches dont tous les critères de \texttt{reward\_basis} sont satisfaits par un agent qui n'écrit rien et ne communique aucune information requise (calcul théorique, section~\ref{sec:biais}). Généré par \texttt{code/domain\_stats.py}.}
+  \caption{Statistiques des domaines (split \texttt{base}). R/W : nombre d'outils de lecture et d'écriture de l'agent. « Mots politique » : longueur de la politique fournie à l'agent. « Actions gold » : longueur de la trajectoire de référence. « Tâches sans écriture » : tâches dont la trajectoire de référence ne contient aucun outil d'écriture, de sorte que l'état final attendu de la base est l'état initial. Généré par \texttt{code/domain\_stats.py}.}
   \label{tab:domaines}
 \end{table}
 
@@ -19,7 +19,12 @@ Le tableau~\ref{tab:domaines} résume les cinq domaines du dépôt. Pour chaque 
   \item annulation autorisée seulement sous 24\,h, en cas d'annulation par la compagnie, en classe affaires ou avec une assurance couvrant le motif ;
   \item compensation réservée à certains profils et à certains motifs.
 \end{itemize}
-Elle impose aussi une procédure : obtenir une confirmation explicite avant toute écriture, et ne faire qu'un appel d'outil à la fois. Les 14 outils combinent des lectures (profil, réservation, statut d'un vol, recherche de vols) et des écritures (\texttt{book\_reservation}, \texttt{cancel\_reservation}, \texttt{update\_reservation\_*}, \texttt{send\_certificate}). Beaucoup de tâches testent la capacité à \emph{refuser} : dans 24 tâches sur 50, la trajectoire de référence ne contient aucune écriture, et l'état final attendu de la base est donc l'état initial.
+Elle impose aussi une procédure : obtenir une confirmation explicite avant toute écriture, et ne faire qu'un appel d'outil à la fois. Les 14 outils combinent des lectures (profil, réservation, statut d'un vol, recherche de vols) et des écritures (\texttt{book\_reservation}, \texttt{cancel\_reservation}, \texttt{update\_reservation\_*}, \texttt{send\_certificate}). Les tâches se répartissent en deux familles de taille comparable.
+\begin{itemize}[nosep]
+  \item \textbf{24 tâches sans écriture attendue.} La trajectoire de référence ne contient que des lectures, et l'état final attendu de la base est l'état initial. Il s'agit presque toujours de \emph{refuser} une demande contraire à la politique (annulation hors conditions, compensation indue, modification interdite), souvent face à un utilisateur qui insiste ou ment. Quelques-unes demandent seulement une information ou une vérification.
+  \item \textbf{26 tâches avec écriture attendue.} L'agent doit modifier la base exactement comme la référence : réserver, annuler, changer de vol ou de classe, ajouter des bagages, émettre un certificat du bon montant.
+\end{itemize}
+Les deux familles sollicitent des compétences différentes : savoir résister et s'abstenir d'un côté, exécuter une procédure exacte de l'autre. Le score \texttt{airline} est leur moyenne (section~\ref{sec:biais}).
 
 \paragraph{\texttt{retail}} (114 tâches, reprises de $\tau$-bench). L'agent gère les commandes d'une boutique en ligne : annulation ou modification d'une commande en attente (adresse, moyen de paiement, articles), retour ou échange d'une commande livrée, modification de l'adresse du client. La politique (environ 1150 mots) impose d'abord une \emph{authentification}, par e-mail ou par nom et code postal. Elle fixe ensuite des règles d'état : on ne modifie qu'une commande en attente, et on ne retourne qu'une commande livrée. Elle ajoute des contraintes de procédure, par exemple un seul appel d'outil de modification ou d'échange par commande, ce qui oblige à rassembler toutes les modifications avant d'agir. Les trajectoires de référence sont les plus longues des deux domaines repris (4,8 actions en moyenne). Les tâches enchaînent souvent plusieurs demandes dans une même conversation.
 

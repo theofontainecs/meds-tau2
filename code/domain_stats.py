@@ -50,19 +50,6 @@ def write_tool_names(domain: str) -> set[str]:
     return names
 
 
-def passive_agent_passes(crit: dict, basis: tuple, writes: set[str]) -> bool:
-    """Un agent qui n'appelle aucun outil d'écriture et ne communique rien obtient-il 1 ?"""
-    actions = crit.get("actions") or []
-    checks = {
-        "DB": not any(a["name"] in writes for a in actions),
-        "COMMUNICATE": not crit.get("communicate_info"),
-        "NL_ASSERTION": not crit.get("nl_assertions"),
-        "ENV_ASSERTION": not crit.get("env_assertions"),
-        "ACTION": not actions,
-    }
-    return all(checks[b] for b in basis)
-
-
 def domain_stats(domain: str) -> dict:
     tasks = json.loads((DATA / domain / "tasks.json").read_text(encoding="utf-8"))
     split_file = DATA / domain / "split_tasks.json"
@@ -75,7 +62,7 @@ def domain_stats(domain: str) -> dict:
 
     writes = write_tool_names(domain)
     reward_bases, n_actions, n_communicate, n_nl = Counter(), [], [], []
-    n_llm_judged = n_no_write = n_passive = 0
+    n_llm_judged = n_no_write = 0
     for t in tasks:
         crit = t.get("evaluation_criteria") or {}
         basis = tuple(crit.get("reward_basis") or DEFAULT_REWARD_BASIS)
@@ -86,7 +73,6 @@ def domain_stats(domain: str) -> dict:
         actions = crit.get("actions") or []
         n_actions.append(len(actions))
         n_no_write += not any(a["name"] in writes for a in actions)
-        n_passive += passive_agent_passes(crit, basis, writes)
         n_communicate.append(len(crit.get("communicate_info") or []))
         n_nl.append(len(crit.get("nl_assertions") or []))
 
@@ -107,7 +93,6 @@ def domain_stats(domain: str) -> dict:
         "max_gold_actions": max(n_actions),
         "tasks_without_gold_actions": sum(1 for n in n_actions if n == 0),
         "tasks_without_gold_write": n_no_write,
-        "tasks_passed_by_passive_agent": n_passive,
         "tasks_with_communicate_info": sum(1 for n in n_communicate if n > 0),
         "tasks_with_nl_assertions": sum(1 for n in n_nl if n > 0),
     }
@@ -129,16 +114,15 @@ def tex_table(stats: dict) -> str:
                 str(s["n_user_tools"]),
                 fmt(s["policy_words"]),
                 str(s["mean_gold_actions"]),
-                str(s["tasks_without_gold_write"]),
-                f'{s["tasks_passed_by_passive_agent"]} ({100 * s["tasks_passed_by_passive_agent"] / s["n_tasks"]:.0f}\\,\\%)',
+                f'{s["tasks_without_gold_write"]} ({100 * s["tasks_without_gold_write"] / s["n_tasks"]:.0f}\\,\\%)',
                 ", ".join(f"{k.replace('_', r'\_').replace('+', r'+\allowbreak ')}~({v})" for k, v in s["reward_basis"].items()),
             ]) + r" \\"
         )
     return "\n".join([
-        r"\begin{tabular}{lrrrrrrrr>{\raggedright\arraybackslash}p{4.6cm}}",
+        r"\begin{tabular}{lrrrrrrr>{\raggedright\arraybackslash}p{7cm}}",
         r"\toprule",
-        r"Domaine & Tâches & Outils & R/W & Outils & Mots & Actions & Gold sans & Réussies par & \texttt{reward\_basis} (nb tâches) \\",
-        r" & & agent & & user & politique & gold moy. & écriture & agent passif & \\",
+        r"Domaine & Tâches & Outils & R/W & Outils & Mots & Actions & Tâches sans & \texttt{reward\_basis} (nb tâches) \\",
+        r" & & agent & & user & politique & gold moy. & écriture & \\",
         r"\midrule",
         *rows,
         r"\bottomrule",

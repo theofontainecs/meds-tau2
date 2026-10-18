@@ -5,20 +5,11 @@
 
 \paragraph{Installation.} Le dépôt \taub{} est inclus comme sous-module Git, figé au commit \texttt{b7ea907}, et installé avec \texttt{uv} sous Python 3.13. L'installation de base ne suffit pas : le code importe à l'initialisation un module vocal (\texttt{websockets}) qui ne figure pas dans les dépendances de base. Nous l'avons ajouté à la main. Les appels aux modèles passent par LiteLLM, vers le proxy du cours.
 
-\paragraph{Premier essai.} Nous avons lancé deux tâches du domaine \texttt{mock}, avec un essai chacune et \texttt{gpt-4.1-mini} comme agent et comme utilisateur. La température par défaut est de 0. La commande exacte et la sortie complète sont dans \texttt{results/}.
-\begin{center}\small
-\texttt{tau2 run --domain mock --agent-llm openai/gpt-4.1-mini --user-llm openai/gpt-4.1-mini}\\
-\texttt{--task-ids create\_task\_1 update\_task\_1 --num-trials 1}
-\end{center}
-Le résultat est $\passk{1} = 0.5$ : une tâche réussie, une tâche échouée.
+\paragraph{Premier essai.} Nous avons lancé deux tâches du domaine \texttt{mock}, avec un essai chacune et \texttt{gpt-4.1-mini} comme agent et comme utilisateur. La température par défaut est de 0. Les commandes exactes et les sorties complètes de toutes nos simulations sont versionnées dans le dossier \texttt{results/} de notre dépôt. Le résultat est $\passk{1} = 0.5$ : une tâche réussie, une tâche échouée.
 
 \paragraph{Lecture des trajectoires.} Dans \texttt{update\_task\_1}, l'utilisateur demande de passer \texttt{task\_1} au statut « completed ». L'agent consulte la liste des utilisateurs, appelle \texttt{update\_task\_status}, puis confirme. La base finale est identique à la base de référence : récompense 1.
 
-L'échec de \texttt{create\_task\_1} est plus instructif. L'utilisateur demande de créer une tâche intitulée « Important Meeting » pour \texttt{user\_1}. L'agent appelle
-\begin{center}\small
-\texttt{create\_task(user\_id="user\_1", title="Important Meeting", description="Track an upcoming meeting")}
-\end{center}
-puis confirme. L'utilisateur remercie et clôt la conversation, satisfait. La récompense est pourtant de 0. La trajectoire de référence appelle \texttt{create\_task} \emph{sans} le champ optionnel \texttt{description}. Les deux bases diffèrent donc d'un seul champ, et leurs \emph{hash} ne coïncident pas. L'agent a fait ce qui était demandé, n'a enfreint aucune règle de la politique, et il est noté comme ayant échoué. C'est un \emph{faux négatif} produit par la comparaison exacte des bases (section~\ref{sec:biais}).
+L'échec de \texttt{create\_task\_1} est plus instructif. L'utilisateur demande de créer une tâche intitulée « Important Meeting » pour \texttt{user\_1}. L'agent crée la tâche avec le bon titre et y ajoute de lui-même une description (« Track an upcoming meeting »), puis confirme. L'utilisateur remercie et clôt la conversation, satisfait. La récompense est pourtant de 0. La trajectoire de référence appelle \texttt{create\_task} \emph{sans} le champ optionnel \texttt{description}. Les deux bases diffèrent donc d'un seul champ, et leurs \emph{hash} ne coïncident pas. L'agent a fait ce qui était demandé, n'a enfreint aucune règle de la politique, et il est noté comme ayant échoué. C'est un \emph{faux négatif} produit par la comparaison exacte des bases (section~\ref{sec:biais}).
 
 \paragraph{Un succès qui n'en est pas un : tâche \texttt{airline}~5.} Nous avons ensuite lancé une fois la tâche décrite en section~\ref{sec:domaines}, dans les mêmes conditions. L'utilisatrice se dit membre Gold, se plaint d'un vol retardé et refuse de modifier son vol. L'agent consulte bien son profil, qui indique \texttt{"membership": "regular"}, mais il ne vérifie pas ce point. Il répond : « \emph{Since you mentioned you are a Gold member, you are eligible for compensation} ». Il propose ensuite un certificat de 200\,\$ (50\,\$ $\times$ 4 passagers). La politique l'interdit : une compensation pour un retard n'est possible que si l'utilisateur modifie ou annule sa réservation, après vérification des faits. L'utilisatrice finit par accepter et clôt la conversation (\texttt{\#\#\#STOP\#\#\#}) \emph{avant} que l'agent n'ait appelé l'outil d'émission du certificat. La base n'a donc pas été modifiée et la récompense vaut 1.
 
@@ -31,45 +22,21 @@ Ce \emph{faux positif} fait pendant au faux négatif précédent. La violation d
 
 Pour éprouver l'hypothèse de l'introduction sans contrainte de budget, nous avons connecté \taub{} à un modèle ouvert servi en local par LM Studio. L'inférence locale supprime le coût en dollars et donne la main sur tous les paramètres d'inférence.
 
-\paragraph{Protocole.}
-\begin{itemize}[nosep]
-  \item \textbf{Modèle} : \texttt{Qwen3-14B} \cite{qwen3}, quantifié en \texttt{Q4\_K\_M}, à la fois comme agent et comme utilisateur simulé.
-  \item \textbf{Inférence} : fenêtre de contexte de 32\,768 tokens, 40 couches déchargées sur GPU, 10 threads CPU, température 0,8.
-  \item \textbf{Échantillon} : les 50 tâches \texttt{airline}, 3 essais par tâche, soit 150 simulations par condition.
-  \item \textbf{Conditions} : (1) sans budget de raisonnement ; (2) avec un budget de raisonnement de 4\,096 tokens.
-\end{itemize}
-L'article n'évalue aucun modèle de cette taille.
+\paragraph{Protocole.} \texttt{Qwen3-14B} \cite{qwen3}, quantifié en \texttt{Q4\_K\_M}, joue à la fois l'agent et l'utilisateur simulé (contexte de 32\,768 tokens, température 0,8). Nous l'évaluons sur les 50 tâches \texttt{airline} avec 3 essais par tâche, soit 150 simulations par condition, sans budget de raisonnement puis avec un budget de 4\,096 tokens. L'article n'évalue aucun modèle de cette taille.
 
 \begin{table}[H]
   \centering\small
   \resizebox{\linewidth}{!}{\input{tables/qwen_reasoning.tex}}
-  \caption{\texttt{Qwen3-14B} sur \texttt{airline} (50 tâches, 3 essais, $N=150$ par condition), sans et avec budget de raisonnement (inférence locale LM Studio, température 0,8). Les lignes \texttt{READ} et \texttt{WRITE} comptent les actions de référence effectivement réalisées par l'agent. Simulations dans \texttt{results/simulations/}.}
+  \caption{\texttt{Qwen3-14B} sur \texttt{airline} (50 tâches, 3 essais, $N=150$ par condition), sans et avec budget de raisonnement. Les lignes \texttt{READ} et \texttt{WRITE} comptent les actions de référence effectivement réalisées par l'agent.}
   \label{tab:qwen-reasoning}
 \end{table}
 
-\paragraph{Observations.} Le tableau~\ref{tab:qwen-reasoning} montre des écarts qui vont tous dans le sens de l'hypothèse :
-\begin{itemize}[nosep]
-  \item la concordance de la base finale passe de 48 à 55 simulations (32,2\,\% à 36,7\,\%), soit 7 succès nets ;
-  \item $\passk{1}$ passe de 30,7\,\% à 32,7\,\% (46 puis 49 succès sur 150) ;
-  \item $\passk{2}$ passe de 18,0\,\% à 21,3\,\% et $\passk{3}$ de 12,0\,\% à 14,0\,\% : le gain relatif sur la fiabilité ($+18$\,\% pour $\passk{2}$) est plus fort que sur le taux de succès moyen ($+6{,}5$\,\%) ;
-  \item avec raisonnement, les 150 conversations se terminent normalement, contre 149 sans (une conversation atteint le nombre maximal de tours).
-\end{itemize}
-Une interprétation possible est que le raisonnement aide l'agent à vérifier les règles douces avant d'écrire (section~\ref{sec:outils}), et rend ses bonnes décisions plus reproductibles d'un essai à l'autre.
+\paragraph{Observations.} Tous les écarts vont dans le sens de l'hypothèse (tableau~\ref{tab:qwen-reasoning}). La concordance de la base finale gagne 7 simulations (de 32,2\,\% à 36,7\,\%) et $\passk{1}$ passe de 30,7\,\% à 32,7\,\%. Le gain relatif est plus fort sur la fiabilité : $+18$\,\% pour $\passk{2}$ (de 18,0\,\% à 21,3\,\%) contre $+6{,}5$\,\% pour $\passk{1}$. Une interprétation possible : le raisonnement aiderait l'agent à vérifier les règles douces avant d'écrire (section~\ref{sec:outils}) et rendrait ses bonnes décisions plus reproductibles.
 
 \paragraph{Ce que ces chiffres permettent de conclure.} Peu de choses à ce stade, pour trois raisons.
 \begin{itemize}[nosep]
-  \item \textbf{Les écarts ne sont pas significatifs.} Un test de comparaison de deux proportions donne $z \approx 0{,}37$ pour $\passk{1}$ et $z \approx 0{,}81$ pour la concordance de la base, loin du seuil de 1,96. Ce test traite de plus les 150 simulations comme indépendantes alors que les 3 essais d'une même tâche sont corrélés, ce qui surestime la taille effective de l'échantillon. Un test apparié par tâche, que permettent les simulations sauvegardées, est nécessaire.
-  \item \textbf{Les deux scores restent sous la référence de l'agent passif.} Un agent qui n'écrirait jamais rien obtiendrait en théorie 46\,\% (section~\ref{sec:biais}). Avec 30 à 33\,\%, l'agent échoue en moyenne sur au moins 7 à 8 des 23 tâches où il suffisait de ne rien modifier : il y effectue des écritures injustifiées, ou subit une erreur du simulateur. Seule l'analyse des trajectoires permettra de trancher. Ce constat relativise aussi la hausse de la concordance de la base : elle peut venir d'un agent qui applique mieux la politique, ou simplement d'un agent qui écrit moins (section~\ref{sec:evaluation}).
-  \item \textbf{L'agent et l'utilisateur sont le même modèle.} L'écart mesuré mêle donc un éventuel effet du raisonnement sur l'agent et un effet sur le comportement de l'utilisateur simulé, dont dépend la difficulté de chaque conversation.
+  \item \textbf{Les écarts ne sont pas significatifs.} Un test de comparaison de deux proportions donne $z \approx 0{,}37$ pour $\passk{1}$ et $z \approx 0{,}81$ pour la concordance de la base, loin du seuil de 1,96. Ce test surestime en outre la taille de l'échantillon, car les 3 essais d'une même tâche sont corrélés : il faudra un test apparié par tâche.
+  \item \textbf{Le score global ne dit pas où porte le gain.} Les 24 tâches de refus et les 26 tâches d'action sollicitent des compétences différentes (section~\ref{sec:domaines}). Un gain sur les premières signalerait un agent qui vérifie mieux la politique avant d'écrire, ou simplement un agent qui écrit moins (section~\ref{sec:evaluation}). Un gain sur les secondes signalerait une meilleure exécution des procédures. Décomposer le score selon ces deux familles est la première analyse à mener sur ces simulations.
+  \item \textbf{L'agent et l'utilisateur sont le même modèle.} L'écart mêle donc un effet du raisonnement sur l'agent et un effet sur l'utilisateur simulé.
 \end{itemize}
-
-\paragraph{Hétérogénéité des tâches.} Sur les cinq premières tâches \texttt{airline}, utilisées pour la mise au point, l'agent réussissait 80\,\% des essais. La chute à 31--33\,\% sur l'ensemble des 50 tâches illustre l'hétérogénéité du domaine. Les premières tâches demandent surtout des lectures ou des refus sans effet sur la base. La suite introduit des scénarios combinatoires : frais d'annulation selon la classe, réacheminements sur plusieurs segments, changements de passagers, bagages supplémentaires. Sans raisonnement, l'agent ne réalise que 29\,\% des écritures de référence. Un sous-ensemble de tâches choisi pour son faible coût n'est donc pas représentatif, ce dont le protocole du rapport~2 devra tenir compte.
-
-\paragraph{Pistes d'explication du plafond observé.} Plusieurs facteurs, que nous ne savons pas encore séparer, peuvent expliquer que l'agent plafonne autour d'un tiers de réussite :
-\begin{itemize}[nosep]
-  \item \textbf{la taille du modèle} : la politique \texttt{airline} compte plus de 1\,300 mots de règles conditionnelles qui se combinent. Un modèle de 14 milliards de paramètres a probablement plus de mal qu'un modèle de pointe à croiser ces règles et à faire les calculs de frais ;
-  \item \textbf{la quantification à 4 bits}, qui peut dégrader la précision des calculs et des arguments d'outils ;
-  \item \textbf{la fenêtre de contexte}, que la politique, l'historique et le raisonnement se partagent : un budget de raisonnement élevé peut la saturer ;
-  \item \textbf{l'utilisateur simulé}, lui aussi un modèle de 14 milliards de paramètres, qui peut omettre une information, contredire son scénario ou clore la conversation trop tôt.
-\end{itemize}
-Les comparaisons proposées en conclusion (mode \emph{solo}, modèle plus grand ou non quantifié, utilisateur fixé) visent à isoler ces facteurs. Sur le plan pratique, l'exécution locale est lente, mais elle permet de mesurer les tokens consommés plutôt qu'un coût en dollars.
+Le plafond autour d'un tiers de réussite peut tenir à la taille du modèle face à une politique de plus de 1\,300 mots, à la quantification à 4 bits, à la saturation du contexte par le raisonnement ou à l'utilisateur simulé. Les comparaisons proposées en conclusion visent à séparer ces facteurs.
