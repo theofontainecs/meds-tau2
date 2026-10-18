@@ -26,6 +26,8 @@
       "mean_gold_actions": 0.8,
       "max_gold_actions": 1,
       "tasks_without_gold_actions": 2,
+      "tasks_without_gold_write": 3,
+      "tasks_passed_by_passive_agent": 1,
       "tasks_with_communicate_info": 1,
       "tasks_with_nl_assertions": 8
     },
@@ -52,6 +54,8 @@
       "mean_gold_actions": 2.84,
       "max_gold_actions": 19,
       "tasks_without_gold_actions": 7,
+      "tasks_without_gold_write": 24,
+      "tasks_passed_by_passive_agent": 23,
       "tasks_with_communicate_info": 6,
       "tasks_with_nl_assertions": 50
     },
@@ -79,6 +83,8 @@
       "mean_gold_actions": 4.82,
       "max_gold_actions": 13,
       "tasks_without_gold_actions": 2,
+      "tasks_without_gold_write": 10,
+      "tasks_passed_by_passive_agent": 6,
       "tasks_with_communicate_info": 36,
       "tasks_with_nl_assertions": 40
     },
@@ -108,6 +114,8 @@
       "mean_gold_actions": 4.53,
       "max_gold_actions": 12,
       "tasks_without_gold_actions": 0,
+      "tasks_without_gold_write": 20,
+      "tasks_passed_by_passive_agent": 0,
       "tasks_with_communicate_info": 0,
       "tasks_with_nl_assertions": 0
     },
@@ -131,6 +139,8 @@
       "mean_gold_actions": 9.85,
       "max_gold_actions": 37,
       "tasks_without_gold_actions": 0,
+      "tasks_without_gold_write": 4,
+      "tasks_passed_by_passive_agent": 0,
       "tasks_with_communicate_info": 0,
       "tasks_with_nl_assertions": 0
     }

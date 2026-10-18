@@ -8,18 +8,26 @@ Le tableau~\ref{tab:domaines} résume les cinq domaines du dépôt. Pour chaque 
 \begin{table}[h]
   \centering\small
   \resizebox{\linewidth}{!}{\input{tables/domains.tex}}
-  \caption{Statistiques des domaines (split \texttt{base}). R/W : nombre d'outils de lecture et d'écriture de l'agent. « Actions gold » : longueur de la trajectoire de référence. Généré par \texttt{code/domain\_stats.py}.}
+  \caption{Statistiques des domaines (split \texttt{base}). R/W : nombre d'outils de lecture et d'écriture de l'agent. « Mots politique » : longueur de la politique fournie à l'agent. « Actions gold » : longueur de la trajectoire de référence. « Gold sans écriture » : tâches dont la trajectoire de référence ne contient aucun outil d'écriture. « Réussies par agent passif » : tâches dont tous les critères de \texttt{reward\_basis} sont satisfaits par un agent qui n'écrit rien et ne communique aucune information requise (calcul théorique, section~\ref{sec:biais}). Généré par \texttt{code/domain\_stats.py}.}
   \label{tab:domaines}
 \end{table}
 
-\begin{description}[nosep]
-  \item[\texttt{airline}] Réservation, modification et annulation de vols, bagages, compensations. Repris de $\tau$-bench.
-  \item[\texttt{retail}] Commandes en ligne : annulation, modification, retour, échange. Repris de $\tau$-bench.
-  \item[\texttt{telecom}] Support technique (absence de service, données mobiles, MMS) en \emph{dual-control}. C'est le domaine nouveau de \taub.
-  \item[\texttt{banking\_knowledge}] Domaine bancaire ajouté plus récemment, avec recherche dans une base documentaire. \todo{Décider si on l'inclut dans le périmètre du projet.}
-  \item[\texttt{mock}] Domaine jouet (gestion de tâches) destiné aux tests. Coût minimal.
-\end{description}
-\todo{1 paragraphe par domaine : nature de la politique, outils principaux, types de tâches.}
+\paragraph{\texttt{airline}} (50 tâches, reprises de $\tau$-bench). L'agent gère les réservations d'une compagnie aérienne : réservation, modification des vols, de la classe, des bagages et des passagers, annulation, compensation. La politique (environ 1300 mots) est riche en règles conditionnelles qui se combinent :
+\begin{itemize}[nosep]
+  \item franchise de bagages selon le statut (regular, silver, gold) et la classe ;
+  \item interdiction de modifier un billet \emph{basic economy} ;
+  \item annulation autorisée seulement sous 24\,h, en cas d'annulation par la compagnie, en classe affaires ou avec une assurance couvrant le motif ;
+  \item compensation réservée à certains profils et à certains motifs.
+\end{itemize}
+Elle impose aussi une procédure : obtenir une confirmation explicite avant toute écriture, et ne faire qu'un appel d'outil à la fois. Les 14 outils combinent des lectures (profil, réservation, statut d'un vol, recherche de vols) et des écritures (\texttt{book\_reservation}, \texttt{cancel\_reservation}, \texttt{update\_reservation\_*}, \texttt{send\_certificate}). Beaucoup de tâches testent la capacité à \emph{refuser} : dans 24 tâches sur 50, la trajectoire de référence ne contient aucune écriture, et l'état final attendu de la base est donc l'état initial.
+
+\paragraph{\texttt{retail}} (114 tâches, reprises de $\tau$-bench). L'agent gère les commandes d'une boutique en ligne : annulation ou modification d'une commande en attente (adresse, moyen de paiement, articles), retour ou échange d'une commande livrée, modification de l'adresse du client. La politique (environ 1150 mots) impose d'abord une \emph{authentification}, par e-mail ou par nom et code postal. Elle fixe ensuite des règles d'état : on ne modifie qu'une commande en attente, et on ne retourne qu'une commande livrée. Elle ajoute des contraintes de procédure, par exemple un seul appel d'outil de modification ou d'échange par commande, ce qui oblige à rassembler toutes les modifications avant d'agir. Les trajectoires de référence sont les plus longues des deux domaines repris (4,8 actions en moyenne). Les tâches enchaînent souvent plusieurs demandes dans une même conversation.
+
+\paragraph{\texttt{telecom}} (114 tâches, nouveau domaine). L'agent fait du support technique pour un opérateur mobile. Trois motifs d'appel sont couverts : absence de service, données mobiles qui ne fonctionnent pas, MMS impossibles à envoyer. L'agent a 13 outils côté opérateur (recherche du client, factures, suspension et réactivation de la ligne, itinérance, recharge de données). L'utilisateur en a 30 sur son téléphone : diagnostics (barre d'état, état du réseau, carte SIM, réglages APN, VPN\ldots) et actions correctives (mode avion, données, itinérance, réinitialisation des réglages APN, redémarrage\ldots). La politique est la plus longue (environ 3700 mots, manuel de dépannage compris). Les tâches sont \emph{générées} : l'article définit 15 groupes de sous-tâches atomiques, chacune avec une fonction d'initialisation, de résolution et d'assertion. Les combiner donne 2285 tâches, dont 114 sont échantillonnées pour équilibrer les motifs et la difficulté \cite{barres2025tau2}. La correction d'une tâche se vérifie donc automatiquement, contrairement aux domaines annotés à la main.
+
+\paragraph{\texttt{banking\_knowledge}} (97 tâches). Ce domaine bancaire a été ajouté après l'article. L'agent doit retrouver l'information utile dans une base de 698 documents, au lieu de la recevoir dans sa politique. Plusieurs configurations de recherche documentaire sont proposées. Le domaine demande des dépendances supplémentaires et n'a pas de découpage train/test. \textbf{Nous l'excluons du périmètre de nos expériences} : nous le décrivons par souci d'exhaustivité, mais il évalue avant tout la recherche d'information, une question distincte de celle de l'agent conversationnel.
+
+\paragraph{\texttt{mock}} (10 tâches). Ce domaine jouet de gestion de tâches (4 outils, politique de 52 mots) sert à tester l'infrastructure à coût quasi nul. Nous l'utilisons pour la mise au point, jamais pour des conclusions.
 
 \subsection{Anatomie d'une tâche}
 
@@ -32,5 +40,25 @@ Une tâche (\texttt{tasks.json}) comprend :
 
 \paragraph{Exemple : tâche \texttt{airline} n°5.} L'utilisatrice se plaint d'un vol retardé, se présente faussement comme membre « Gold » et insiste pour obtenir une compensation maximale, sans vouloir modifier son vol. La trajectoire de référence contient une seule action, de lecture (\texttt{get\_user\_details}). L'état final attendu de la base est donc \emph{identique} à l'état initial. Pour réussir, l'agent doit vérifier le statut réel de l'utilisatrice, appliquer la politique et résister à la pression sociale \emph{sans rien écrire}. Si l'agent cède et accorde un certificat, la base est modifiée et la récompense tombe à 0.
 
-\subsection{Outils}
-Les outils sont des méthodes Python décorées par \texttt{@is\_tool}. Le décorateur les classe en lecture (\texttt{READ}), écriture (\texttt{WRITE}) ou autre (\texttt{GENERIC}, par exemple le transfert vers un humain). Leur docstring sert de description en langue naturelle transmise à l'agent. Les écritures vérifient une partie des règles de la politique, mais pas toutes. \todo{Quantifier : quelles règles de la politique \texttt{airline} sont appliquées par le code, et lesquelles reposent sur l'agent seul ?}
+\subsection{Outils et application de la politique}
+\label{sec:outils}
+
+Les outils sont des méthodes Python décorées par \texttt{@is\_tool}. Le décorateur les classe en lecture (\texttt{READ}), écriture (\texttt{WRITE}) ou autre (\texttt{GENERIC}, par exemple le transfert vers un humain). Leur docstring sert de description en langue naturelle transmise à l'agent.
+
+Nous avons comparé les règles de la politique \texttt{airline} aux vérifications présentes dans le code des outils. Les outils vérifient l'\emph{intégrité des données} :
+\begin{itemize}[nosep]
+  \item existence de l'utilisateur, de la réservation et du vol ;
+  \item places disponibles et vol réservable à la date demandée ;
+  \item moyen de paiement présent dans le profil, solde suffisant, montants payés égaux au prix ;
+  \item nombre de passagers inchangé lors d'une modification ;
+  \item certificat inutilisable pour payer une modification.
+\end{itemize}
+En revanche, nous n'avons trouvé \emph{aucune} vérification des règles métier :
+\begin{itemize}[nosep]
+  \item conditions d'annulation ;
+  \item interdiction de modifier un billet \emph{basic economy} ;
+  \item éligibilité et montant d'une compensation : \texttt{send\_certificate} accepte n'importe quel montant pour n'importe quel utilisateur ;
+  \item franchise de bagages ;
+  \item obligation de confirmation avant écriture.
+\end{itemize}
+La politique l'assume explicitement (« \emph{The API does not check that cancellation rules are met} »). Le benchmark mesure donc précisément ce que l'agent fait \emph{quand rien ne l'empêche de mal faire}. C'est l'objectif recherché, mais cela signifie aussi qu'une erreur de l'agent n'est sanctionnée que si elle laisse une trace dans la base (section~\ref{sec:biais}).

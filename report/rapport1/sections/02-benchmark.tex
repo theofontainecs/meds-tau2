@@ -3,20 +3,41 @@
 
 \subsection{Une simulation à trois acteurs}
 
-Chaque épisode met en jeu trois composants, coordonnés par un \emph{orchestrateur} qui fait alterner les tours de parole :
+Chaque épisode met en jeu trois composants, coordonnés par un \emph{orchestrateur} qui fait alterner les tours de parole (figure~\ref{fig:archi}) :
 \begin{description}[nosep]
   \item[L'agent évalué] est un LLM. Son prompt système contient la \emph{politique} du domaine, un document en langue naturelle qui fixe les règles métier. Il reçoit aussi la description des outils qu'il peut appeler.
   \item[L'utilisateur simulé] est un autre LLM. Il suit un scénario que l'agent ne voit pas : persona, motif de l'appel, informations connues ou inconnues, consignes de comportement (par exemple « insister », « ne pas accepter la première offre »).
   \item[L'environnement] est une base de données en mémoire propre au domaine (réservations, commandes, lignes téléphoniques\ldots). Les outils sont des fonctions Python déterministes qui la lisent ou la modifient.
 \end{description}
-L'épisode se termine quand l'utilisateur émet un signal d'arrêt (fin de conversation, transfert vers un humain) ou quand le nombre maximal de tours est atteint.
+L'épisode se termine quand l'utilisateur émet un signal d'arrêt (\texttt{\#\#\#STOP\#\#\#}), quand l'agent transfère vers un humain, ou quand le nombre maximal de tours est atteint. La trajectoire complète est ensuite notée (section~\ref{sec:evaluation}).
 
-\todo{Figure : schéma agent / utilisateur / environnement / orchestrateur.}
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  box/.style={draw, rounded corners, align=center, minimum width=3.3cm, minimum height=1.25cm, font=\small},
+  db/.style={draw, cylinder, shape border rotate=90, aspect=0.25, align=center, minimum width=2.6cm, minimum height=1.2cm, font=\small},
+  lab/.style={font=\footnotesize, align=center},
+  >=Stealth]
+  \node[box, fill=blue!8] (agent) at (0,0) {\textbf{Agent évalué}\\(LLM + politique)};
+  \node[box, fill=orange!10] (user) at (8,0) {\textbf{Utilisateur simulé}\\(LLM + scénario caché)};
+  \node[db, fill=gray!10] (dbA) at (0,-3) {Base agent\\(réservations\ldots)};
+  \node[db, fill=gray!10] (dbU) at (8,-3) {Base utilisateur\\(téléphone, \texttt{telecom})};
+  \node[box, dashed, minimum width=2.6cm] (eval) at (4,-3) {\textbf{Évaluation}\\état final vs gold};
+  \draw[<->, thick] (agent) -- node[lab, above] {messages (tour par tour)} node[lab, below] {orchestrateur} (user);
+  \draw[->] (agent.south) -- node[lab, left] {outils\\agent} (dbA.north);
+  \draw[->] (user.south) -- node[lab, right] {outils\\utilisateur} (dbU.north);
+  \draw[->, dashed] (dbA.east) -- (eval.west);
+  \draw[->, dashed] (dbU.west) -- (eval.east);
+\end{tikzpicture}
+\caption{Architecture d'un épisode \taub. Les outils de l'utilisateur et sa base n'existent que dans le domaine \texttt{telecom} (cadre \emph{dual-control}).}
+\label{fig:archi}
+\end{figure}
 
 \subsection{Le cadre \emph{dual-control}}
 
-Dans $\tau$-bench, seul l'agent agit sur l'environnement : l'utilisateur ne fait que fournir des informations. \taub{} ajoute un domaine (\texttt{telecom}) où l'utilisateur possède ses propres outils, qui simulent son téléphone : redémarrer, activer les données mobiles, vérifier le mode avion, etc. Il dispose aussi d'un état propre, une seconde base de données. L'agent ne voit pas cet état et ne peut pas agir dessus : il doit obtenir de l'utilisateur qu'il effectue les bonnes actions et lui rapporte les bonnes observations. Les auteurs formalisent ce cadre comme un Dec-POMDP \cite{barres2025tau2}.
-\todo{Vérifier dans l'article la formalisation exacte et la reformuler.}
+Dans $\tau$-bench, seul l'agent agit sur l'environnement : l'utilisateur ne fait que fournir des informations. \taub{} ajoute un domaine (\texttt{telecom}) où l'utilisateur possède ses propres outils, qui simulent son téléphone : redémarrer, activer les données mobiles, vérifier le mode avion, etc. Ces outils agissent sur un état propre, une seconde base de données. L'agent ne voit pas cet état et ne peut pas agir dessus : il doit obtenir de l'utilisateur qu'il effectue les bonnes actions et lui rapporte les bonnes observations.
+
+Les auteurs modélisent ce cadre comme un processus de décision markovien décentralisé et partiellement observable (Dec-POMDP) à deux joueurs, l'agent et l'utilisateur \cite{barres2025tau2}. L'état est le produit de l'état du monde (base de l'agent et base de l'utilisateur) et de l'historique de la conversation. À chaque tour, un seul joueur agit, soit par un appel d'outil, soit par un message. Il observe en retour la sortie de l'outil ou le message de l'autre joueur. La récompense est une fonction globale de l'état final, qui vaut 1 en cas de succès et 0 sinon. Ce cadre rend explicite le fait que chaque joueur n'a qu'une vue partielle de la situation : l'agent ne voit pas le téléphone, l'utilisateur ne voit pas la politique.
 
 \subsection{Métrique : \texorpdfstring{$\passk{k}$}{pass\^{}k}}
 
@@ -24,7 +45,14 @@ Chaque essai d'une tâche reçoit une récompense binaire $r \in \{0,1\}$ (secti
 \begin{equation}
   \passk{k} = \mathbb{E}_{\text{tâches}}\left[\frac{\binom{c}{k}}{\binom{n}{k}}\right], \qquad k \le n.
 \end{equation}
-$\passk{1}$ est le taux de succès moyen. Contrairement à pass@$k$ (au moins un succès parmi $k$), $\passk{k}$ décroît avec $k$ : cette métrique mesure la \emph{fiabilité} de l'agent, une exigence centrale pour un agent déployé face à des clients.
+$\passk{1}$ est le taux de succès moyen. Contrairement à pass@$k$ (au moins un succès parmi $k$), $\passk{k}$ décroît avec $k$ : cette métrique mesure la \emph{fiabilité} de l'agent, une exigence centrale pour un agent déployé face à des clients. Dans l'article, $\passk{k}$ décroît plus vite avec $k$ sur \texttt{telecom} que sur \texttt{airline}, signe d'un comportement moins constant \cite{barres2025tau2}.
 
 \subsection{Modes d'exécution}
-\todo{Décrire les modes (conversation standard, \emph{solo}/no-user, plan oracle) et ce que leur comparaison permet d'isoler : raisonnement ou coordination avec l'utilisateur. Vérifier les noms exacts dans \texttt{docs/cli-reference.md}.}
+
+Pour le domaine \texttt{telecom}, le dépôt propose deux variantes du mode standard, qui servent d'ablations :
+\begin{description}[nosep]
+  \item[Standard] L'agent et l'utilisateur simulé collaborent en \emph{dual-control}.
+  \item[Sans utilisateur (\emph{solo})] L'agent reçoit un ticket qui résume le problème et contrôle seul tous les outils, y compris ceux de l'utilisateur (agent \texttt{llm\_agent\_solo}, utilisateur \texttt{dummy\_user}). Ce mode isole le raisonnement et l'usage des outils de toute communication.
+  \item[Plan oracle] L'agent (\texttt{llm\_agent\_gt}) reçoit la séquence d'actions de référence des deux joueurs. La charge de raisonnement disparaît, et il ne reste que la coordination avec l'utilisateur.
+\end{description}
+La comparaison des modes décompose l'échec. L'écart entre le mode \emph{solo} et le mode standard mesure le coût de la communication. Selon l'article, il fait chuter $\passk{1}$ d'environ 18\,\% pour \texttt{gpt-4.1} et de 25\,\% pour \texttt{o4-mini} \cite{barres2025tau2}. Le mode oracle borne, lui, ce qu'apporterait un raisonnement parfait.

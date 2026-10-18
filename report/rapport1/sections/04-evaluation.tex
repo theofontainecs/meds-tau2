@@ -18,4 +18,4 @@ La récompense d'un essai est le \emph{produit} des composantes listées dans \t
   \item seul \texttt{airline} suit la valeur par défaut.
 \end{itemize}
 Concrètement, \emph{un même score $\passk{1}$ ne recouvre donc pas la même notion de succès selon le domaine}.
-\todo{Vérifier dans le code si \texttt{reward\_basis} est surchargé à l'exécution, par exemple par une option CLI.}
+Nous avons vérifié que ces valeurs sont bien celles appliquées. La commande \texttt{tau2 run} utilise le mode d'évaluation \texttt{ALL}, qui respecte le \texttt{reward\_basis} de chaque tâche. Les modes qui l'ignorent (\texttt{ALL\_IGNORE\_BASIS}, etc.) ne servent qu'au débogage et ne sont pas exposés par défaut.

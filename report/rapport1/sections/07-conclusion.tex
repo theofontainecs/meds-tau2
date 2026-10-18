@@ -1,12 +1,12 @@
 \section{Conclusion et suite du projet}
 
-\taub{} évalue l'agent sur ce qu'il \emph{fait}, l'état final de l'environnement, plutôt que sur ce qu'il \emph{dit}. Cette approche est objective et reproductible, mais elle laisse de côté une part importante du comportement conversationnel. Le benchmark dépend aussi fortement de choix rarement explicités : modèle utilisateur, composition de \texttt{reward\_basis}, nombre d'essais. Une partie de ses tâches s'est d'ailleurs révélée erronée.
+\taub{} évalue l'agent sur ce qu'il \emph{fait}, l'état final de l'environnement, plutôt que sur ce qu'il \emph{dit}. Cette approche est objective et reproductible, et elle se prête bien à une évaluation automatique à grande échelle. Elle a pourtant une conséquence méconnue : un agent qui refuse tout réussirait en théorie 46\,\% des tâches \texttt{airline}. Nos premiers essais montrent aussi qu'elle produit à la fois des faux négatifs (une demande satisfaite, mais un champ facultatif en trop) et des faux positifs (une violation de la politique sans trace dans la base). Le score dépend en outre de choix rarement explicités : modèle utilisateur, composition de \texttt{reward\_basis}, qui diffère selon le domaine, nombre d'essais. Enfin, plus d'un tiers des tâches \texttt{airline} et \texttt{retail} ont dû être corrigées. Un score \taub{} n'a donc de sens qu'accompagné de son protocole complet. C'est ce protocole que nous construirons dans le rapport~2.
 
-\paragraph{Pistes pour le rapport 2.}
-\todo{Questions de recherche candidates, à trier :}
-\begin{itemize}[nosep]
-  \item Quelle part de la variance du score vient de l'utilisateur simulé plutôt que de l'agent ? On peut tester en faisant varier le modèle utilisateur à agent fixé.
-  \item Combien d'essais faut-il pour séparer deux agents de manière significative ?
-  \item Les échecs relèvent-ils du raisonnement, de la politique ou de la communication ? On peut le mesurer par une annotation manuelle de trajectoires et par la comparaison avec le mode \emph{solo}.
-  \item Que changerait une notation qui tient compte de ce que l'agent dit, et non seulement de ce qu'il fait ?
-\end{itemize}
+\paragraph{Pistes pour le rapport 2.} Nous retenons cinq questions de recherche candidates. Nous les préciserons et en choisirons deux ou trois selon le budget.
+\begin{enumerate}[nosep]
+  \item \textbf{Quelle référence pour lire un score ?} On mesure expérimentalement le score d'agents triviaux (un agent qui refuse tout, un agent qui exécute toute demande sans vérifier) et on situe les vrais agents par rapport à eux. C'est l'expérience la moins coûteuse et la plus directement liée à la validité du score.
+  \item \textbf{Le score mesure-t-il l'agent ou l'utilisateur simulé ?} À agent fixé, on fait varier le modèle utilisateur et on mesure la part de variance du score qui lui revient.
+  \item \textbf{Faux positifs et faux négatifs.} On annote à la main un échantillon de trajectoires pour estimer à quelle fréquence la note binaire contredit le respect réel de la politique. On compare ensuite avec une notation qui inclut les assertions en langue naturelle.
+  \item \textbf{Combien d'essais pour conclure ?} On estime la variance entre essais et on en déduit le nombre de tâches et d'essais nécessaires pour séparer deux agents de manière significative.
+  \item \textbf{Effort de raisonnement et taille du modèle.} On mesure l'effet du budget de raisonnement sur le score et sur les tokens consommés, en comparant des modèles locaux (environ 14B) et des modèles accessibles par API, à protocole identique.
+\end{enumerate}

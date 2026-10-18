@@ -8,15 +8,18 @@
 \usepackage[margin=2.3cm]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{graphicx}
 \usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta}
 \usepackage{enumitem}
 \usepackage[hidelinks]{hyperref}
 \usepackage[style=numeric,sorting=none,backend=biber]{biblatex}
 \addbibresource{../refs.bib}
 
 % Notes de travail : passer \notesfalse pour la version rendue
-\newif\ifnotes \notestrue
+\newif\ifnotes \notesfalse
 \newcommand{\todo}[1]{\ifnotes{\color{red}\textbf{[TODO]} #1}\fi}
 
 \newcommand{\taub}{$\tau^2$-bench}
