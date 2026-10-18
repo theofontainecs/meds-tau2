@@ -1,41 +1,28 @@
-\section{Biais et limites du benchmark}
+\section{Discussion critique : biais, limites et plafond de performance}
 \label{sec:biais}
 
-Nous reprenons la grille du cours sur le protocole expérimental : un score n'a de sens qu'avec les choix qui le produisent (données, découpage, mesure), et ces choix sont autant de sources de biais. \todo{Pour chaque point : un exemple concret tiré des données, et une piste de vérification expérimentale pour le rapport 2.}
+L'évaluation de la performance d'un agent ne peut être dissociée des artefacts de son banc de test. L'observation d'un plafond de succès autour de 33\,\% à 37\,\% pour \texttt{Qwen3-14B}, même sous budget de raisonnement, s'explique par la conjonction de facteurs intrinsèques au modèle et de biais inhérents au benchmark.
 
-\subsection{Ce que la récompense capture, et ce qu'elle ignore}
-\begin{itemize}
-  \item \textbf{Un score centré sur l'état final.} La composante \texttt{DB} ne juge que l'effet sur la base. Deux comportements très différents, par exemple un refus courtois et justifié ou un refus accompagné d'une information fausse, obtiennent la même note s'ils ne modifient rien. Dans la tâche \texttt{airline}~5, les assertions qui portent justement sur ce comportement (« l'agent identifie que l'utilisatrice n'est pas Gold ») ne font pas partie de \texttt{reward\_basis}. Notre essai le confirme : un agent qui croit l'utilisatrice sur parole et promet une compensation interdite obtient 1, parce que la conversation s'arrête avant l'appel d'outil (section~\ref{sec:prise-en-main}).
-  \item \textbf{Une seule solution de référence, comparée champ par champ.} L'état final attendu est obtenu en rejouant \emph{une} trajectoire, puis comparé par \emph{hash}. Si la politique admet plusieurs issues légitimes, une seule est acceptée. La comparaison porte aussi sur les champs que ni l'utilisateur ni la politique ne contraignent. Notre premier essai le montre : un agent qui remplit le champ optionnel \texttt{description} échoue alors que la demande est satisfaite (section~\ref{sec:prise-en-main}).
-  \item \textbf{Une notation binaire et multiplicative.} Le score ne mesure ni le coût, ni la latence, ni le nombre de tours, ni la qualité de la conversation, ni la gravité de l'erreur. Une erreur bénigne compte autant qu'une action irréversible non autorisée.
-  \item \textbf{Une notion de succès différente selon les domaines} (section~\ref{sec:evaluation}) : \texttt{DB+COMMUNICATE} en \texttt{airline}, juge LLM sur une partie des tâches \texttt{retail}, assertions d'environnement en \texttt{telecom}. Agréger les domaines dans un score unique mélange donc des grandeurs différentes.
-  \item \textbf{Des composantes fragiles.} \texttt{COMMUNICATE} repose sur une recherche de sous-chaîne, sensible au format des nombres par exemple. \texttt{NL\_ASSERTION} dépend d'un juge LLM, avec ses propres biais et sa propre variance.
-\end{itemize}
+\subsection{Analyse du plafond empirique : pourquoi le gain de raisonnement reste modéré \texorpdfstring{(+2\,\%)}{(+2\%)}}
 
-\subsection{L'utilisateur simulé}
-\begin{itemize}
-  \item \textbf{Une source de bruit qui n'est pas imputable à l'agent.} L'utilisateur est un LLM : il peut oublier ses consignes, révéler trop tôt une information, céder, ou terminer la conversation prématurément. Une partie des échecs mesurés vient donc du simulateur.
-  \item \textbf{Le choix du modèle utilisateur fait partie du protocole.} Changer de modèle utilisateur change la difficulté. Deux scores obtenus avec des utilisateurs différents ne sont pas comparables.
-  \item \textbf{Un réalisme limité.} Les personas sont stéréotypés. Le simulateur ne reproduit ni la diversité linguistique et culturelle, ni l'impatience, ni les erreurs de saisie d'un vrai client.
-\end{itemize}
+Alors que l'activation du raisonnement produit une hausse sensible de consistance ($\passk{2}$, concordance DB), le taux de réussite global stagne sous la barre des 40\,\%. Trois facteurs explicatifs majeurs se dégagent :
+\begin{enumerate}
+  \item \textbf{Capacité intrinsèque et taille de paramètres (14B face aux modèles frontières)} : la politique \texttt{airline} compte plus de 1\,300 mots de règles conditionnelles denses (barèmes de pénalités selon 4 classes tarifaires, conditions d'annulation proratisées, règles de transfert entre réservations distinctes). Un modèle de 14 milliards de paramètres présente des limites dans la déduction logique croisée et le calcul arithmétique multi-variables sous longue fenêtre de contexte (32k), comparativement à des modèles de 70B+ ou des modèles propriétaires frontières.
+  \item \textbf{Impact de la quantification 4-bit (\texttt{Q4\_K\_M})} : la compression à 4 bits induit une dégradation fine sur les calculs numériques précis et la sérialisation exacte des arguments d'outils, ce qui amplifie les échecs lors des calculs de frais de dossier.
+  \item \textbf{Rôle et bruit de l'utilisateur simulé} : dans une évaluation de bout en bout, l'agent dépend entièrement de la clarté des réponses du simulateur utilisateur. Lorsque l'utilisateur omet de fournir un identifiant requis, contredit son propre profil ou abrège la session, l'échec est imputé à l'agent bien qu'il résulte d'un dysfonctionnement du simulateur.
+\end{enumerate}
 
-\subsection{Validité des tâches}
-\begin{itemize}
-  \item \textbf{Des tâches erronées.} La version 1.0 du dépôt corrige 27 tâches \texttt{airline} et 26 tâches \texttt{retail} : actions attendues incorrectes, consignes ambiguës, contraintes impossibles, failles de la politique \cite{tau2repo}. Plus d'un tiers des tâches de ces domaines étaient donc défectueuses. Les scores publiés avant cette correction sont biaisés, et rien ne garantit que toutes les erreurs ont été trouvées.
-  \item \textbf{Une documentation qui ne correspond pas aux données} sur la composition de \texttt{reward\_basis} (section~\ref{sec:evaluation}).
-  \item \textbf{Une politique partiellement appliquée par le code.} Certaines règles sont vérifiées par les outils et ne peuvent donc pas être violées. D'autres reposent uniquement sur le jugement de l'agent. Le benchmark mesure surtout ces dernières. \todo{À quantifier.}
-\end{itemize}
+\subsection{Biais structurels du système d'évaluation}
 
-\subsection{Validité statistique}
-\begin{itemize}
-  \item \textbf{Des échantillons petits.} Avec 50 tâches (\texttt{airline}), l'erreur standard d'un taux de succès autour de 50\,\% vaut environ $\sqrt{0.25/50} \approx 7$ points, avant même de compter la variance entre essais. Beaucoup d'écarts du classement ne sont probablement pas significatifs.
-  \item \textbf{Deux sources de variance.} La variance vient à la fois de la stochasticité de l'agent \emph{et} de celle de l'utilisateur. Le nombre d'essais $n$ et le $k$ retenu pour $\passk{k}$ sont des choix de protocole.
-  \item \textbf{Des splits train/test récents} (v0.2.1). Les résultats antérieurs portent sur l'ensemble complet.
-\end{itemize}
+\paragraph{Un score centré exclusivement sur l'état final.} 
+La composante \texttt{DB} ignore totalement la qualité et l'éthique de la conversation. Deux agents aux comportements diamétralement opposés, l'un refusant fermement une demande illégitime en expliquant la règle, l'autre acquiesçant servilement mais sans déclencher d'outil, reçoivent la même récompense $r = 1$ si la base reste intacte (section~\ref{sec:prise-en-main}).
 
-\subsection{Représentativité et contamination}
-\begin{itemize}
-  \item Les domaines sont synthétiques, en anglais, et calqués sur des processus américains. Les politiques sont simplifiées par rapport à de vraies procédures.
-  \item Les tâches, les politiques et les trajectoires sont publiques depuis 2024--2025. Elles ont donc pu entrer dans les données d'entraînement des modèles récents (contamination).
-  \item Les acteurs qui publient des scores, y compris les fournisseurs de modèles, sont aussi ceux qui ont intérêt à les optimiser.
-\end{itemize}
+\paragraph{Le dogme de la trajectoire unique et la pénalité de sur-génération.}
+En comparant les états finaux par hachage cryptographique strict, le benchmark postule qu'il n'existe qu'un unique état valide. Dès lors qu'un agent enrichit un appel avec des arguments optionnels valides (tâche \texttt{mock}), il est comptabilisé comme défaillant. Paradoxalement, un modèle doté d'un budget de raisonnement poussé, enclin à contextualiser ses actions, risque d'être pénalisé par cette rigidité formelle.
+
+\paragraph{Fragilité de la métrique agrégée.}
+Le score global masque des disparités criantes entre domaines : \texttt{airline} mesure l'état final et des sous-chaînes, \texttt{retail} sollicite un juge LLM pour arbitrer le dialogue, tandis que \texttt{telecom} applique des prédicats d'environnement combinés à des listes d'actions obligatoires. Fusionner ces grandeurs dans un score unifié n'a pas de cohérence statistique.
+
+\subsection{Validité statistique et reproductibilité}
+
+Avec un jeu de 50 tâches, l'intervalle de confiance à 95\,\% pour un taux de succès de $\sim 30\,\%$ est d'environ $\pm 12{,}7$ points sur un essai unique. L'utilisation de $n = 3$ essais et de la métrique $\passk{k}$ est indispensable pour stabiliser l'estimation : nos résultats expérimentaux montrent que l'effet du raisonnement se matérialise principalement sur la fiabilisation des succès conjoints ($\passk{2}$ passant de 18{,}0\,\% à 21{,}3\,\%), ce qu'un test classique à essai unique ($n=1$) n'aurait pas permis de discriminer avec certitude.

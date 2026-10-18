@@ -1,14 +1,26 @@
 \section{Introduction}
 
-Un LLM n'est plus seulement un générateur de texte : il appelle des outils, agit sur des systèmes d'information et enchaîne ces actions dans une boucle « raisonner, agir, observer » \cite{yao2023react}. On l'appelle alors un \emph{agent}. Évaluer un agent pose des difficultés que l'évaluation classique d'un modèle ne connaît pas :
+Les modèles de langage (LLM) sont désormais couramment déployés sous forme d'\emph{agents} autonomes. Ils appellent des interfaces de programmation (outils), inspectent et modifient des bases de données et enchaînent des décisions dans une boucle interactive d'observation et d'action \cite{yao2023react}. Cependant, l'évaluation de ces agents soulève des défis méthodologiques fondamentaux que les bancs d'essai supervisés classiques ne rencontrent pas :
 \begin{itemize}[nosep]
-  \item la sortie n'est pas une réponse unique mais une \emph{trajectoire} (messages, appels d'outils, modifications d'état) ;
-  \item le comportement est stochastique et dépend de l'interlocuteur ;
-  \item une erreur a des conséquences sur le monde, par exemple un remboursement injustifié ou une annulation non demandée.
+  \item la performance ne s'évalue pas sur une réponse textuelle isolée mais sur une \emph{trajectoire} séquentielle d'actions et de modifications d'état
+  \item la dynamique est non déterministe et dépendante d'un interlocuteur externe stochastique
+  \item les actions erronées ont des effets de bord irréversibles sur l'environnement (\emph{e.g.} annulation indue, modification de dossier ou remboursement injustifié).
 \end{itemize}
 
-\taub{} \cite{barres2025tau2}, développé par Sierra Research, prolonge $\tau$-bench \cite{yao2024taubench}. Il simule des conversations de service client entre un agent évalué et un utilisateur simulé par un LLM, dans plusieurs domaines (compagnie aérienne, vente en ligne, opérateur télécom, banque). Sa principale nouveauté est le cadre \emph{dual-control} du domaine télécom : l'utilisateur dispose lui aussi d'outils, et l'agent doit le guider pour qu'il agisse sur son propre appareil.
+\vspace{4mm}
+\noindent
+Pour illustrer cette complexité, \taub{} \cite{barres2025tau2}, succédant à $\tau$-bench \cite{yao2024taubench}, simule des interactions de service client entre un agent évalué et un utilisateur incarné par un autre modèle de langage dans des domaines à fortes contraintes métier (\emph{e.g.} aérien, commerce en ligne, support télécom en contrôle partagé dit \textit{dual-control}).
 
-\paragraph{Objectif du projet.} Il ne s'agit pas d'obtenir le meilleur score. Nous voulons comprendre \emph{ce que le benchmark mesure réellement}, puis concevoir un protocole d'évaluation rigoureux, l'appliquer à deux ou trois agents simples et en rendre compte de façon critique et traçable. Ce premier rapport pose les bases : description du benchmark (sections~\ref{sec:benchmark} à \ref{sec:evaluation}), prise en main (section~\ref{sec:prise-en-main}), puis biais et limites (section~\ref{sec:biais}).
+\paragraph{Hypothèse de recherche.} L'émergence récente des architectures dotées de capacités de délibération interne explicite (\emph{reasoning models}, budgétisation de tokens de pensée au moment de l'inférence) suggère une hypothèse centrale : \emph{un modèle doté d'une phase de raisonnement préalable produit des résultats nettement supérieurs sur des tâches d'agents outillés}. Intuitivement, ce temps de calcul doit permettre à l'agent d'analyser avec rigueur les préconditions d'une politique avant de déclencher des outils, de planifier des séquences d'actions à plusieurs étapes et de faire face aux biais ou aux tentatives de manipulation d'un utilisateur.
 
-\paragraph{Traçabilité.} Toutes les observations portent sur le dépôt officiel \cite{tau2repo} figé au commit \texttt{b7ea907} (version 1.0.1). Les statistiques sont produites par \texttt{code/domain\_stats.py} dans notre dépôt.
+\paragraph{Problématique et démarche.} Toutefois, une question méthodologique préalable s'impose : \emph{que mesure véritablement \taub{} ?} Le score reflète-t-il la compétence réelle de l'agent ou les artefacts de sa mécanique de simulation et d'évaluation ? 
+
+\vspace{2mm}\noindent
+Ce document apporte une double contribution :
+\begin{enumerate}[nosep]
+  \item Une autopsie critique du benchmark (sections~\ref{sec:benchmark} à \ref{sec:evaluation}) démontrant que la fonction de récompense induit simultanément des faux négatifs stricts (sanctionnant les enrichissements d'arguments légitimes) et des faux positifs silencieux (récompensant l'inertie face à une violation de politique)
+  \item Une évaluation empirique contrôlée (section~\ref{sec:prise-en-main}) sur le domaine \texttt{airline} complet (50 tâches, 150 simulations), comparant un agent \texttt{Qwen3-14B} sans budget de réflexion et avec un budget de raisonnement de 4096 tokens, quantifiant l'impact du raisonnement sur la cohérence des bases de données et la stabilité entre les essais $\passk{k}$.
+\end{enumerate}
+
+\vspace{2mm}\noindent
+Toutes nos analyses s'appuient sur le dépôt officiel figé au commit \texttt{b7ea907} (version 1.0.1) \cite{tau2repo}.

@@ -1,3 +1,5 @@
+% !TeX TXS-program:bibliography = txs:///biber
+% !BIB program = biber
 \documentclass[11pt,a4paper]{article}
 
 \usepackage[T1]{fontenc}
@@ -11,22 +13,22 @@
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{enumitem}
+\usepackage{float}
 \usepackage[hidelinks]{hyperref}
+\usepackage{csquotes}
 \usepackage[style=numeric,sorting=none,backend=biber]{biblatex}
 \addbibresource{../refs.bib}
 
 % Notes de travail : passer \notesfalse pour la version rendue
-\newif\ifnotes \notestrue
+\newif\ifnotes \notesfalse
 \newcommand{\todo}[1]{\ifnotes{\color{red}\textbf{[TODO]} #1}\fi}
 
 \newcommand{\taub}{$\tau^2$-bench}
 \newcommand{\passk}[1]{\text{pass}^{#1}}
 
-\title{Que mesure vraiment \taub{} ?\\[0.3em]
-\large Rapport 1 --- Prise en main, domaines et limites du benchmark}
-\author{Théo Fontaine, Jean-Léo Serrano \\[0.3em]
-\small M2 MIND --- MEDS (méthodologie projet), Sorbonne Université}
-\date{Octobre 2026}
+\title{Évaluation de la fiabilité des agents et impact du raisonnement délibératif sur politiques complexes}
+\author{Théo Fontaine \and Jean-Léo Serrano}
+\date{\today}
 
 \begin{document}
 \maketitle
@@ -43,6 +45,6 @@
 \input{sections/06-biais-limites}
 \input{sections/07-conclusion}
 
-\printbibliography
+\printbibliography[heading=bibintoc,title={Références}]
 
 \end{document}

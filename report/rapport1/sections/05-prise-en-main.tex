@@ -1,25 +1,63 @@
-\section{Prise en main}
+\section{Évaluation expérimentale et impact du raisonnement}
 \label{sec:prise-en-main}
 
-\paragraph{Installation.} Le dépôt \taub{} est inclus comme sous-module Git, figé au commit \texttt{b7ea907}, et installé avec \texttt{uv} sous Python 3.13. L'installation de base ne suffit pas : le code importe à l'initialisation un module vocal (\texttt{websockets}) qui ne figure pas dans les dépendances de base. Nous l'avons ajouté à la main. Les appels aux modèles passent par LiteLLM, vers le proxy du cours.
+Pour illustrer rigoureusement notre hypothèse de recherche, nous avons conduit une série d'expérimentations sur \taub{} sous environnement local, permettant de s'affranchir des contraintes budgétaires d'API et de contrôler l'intégralité des paramètres d'inférence.
 
-\paragraph{Premier essai.} Nous avons lancé deux tâches du domaine \texttt{mock}, avec un essai chacune et \texttt{gpt-4.1-mini} comme agent et comme utilisateur. La température par défaut est de 0. La commande exacte et la sortie complète sont dans \texttt{results/}.
-\begin{center}\small
-\texttt{tau2 run --domain mock --agent-llm openai/gpt-4.1-mini --user-llm openai/gpt-4.1-mini}\\
-\texttt{--task-ids create\_task\_1 update\_task\_1 --num-trials 1}
-\end{center}
-Le résultat est $\passk{1} = 0.5$ : une tâche réussie, une tâche échouée.
+\subsection{Protocole d'inférence locale}
 
-\paragraph{Lecture des trajectoires.} Dans \texttt{update\_task\_1}, l'utilisateur demande de passer \texttt{task\_1} au statut « completed ». L'agent consulte la liste des utilisateurs, appelle \texttt{update\_task\_status}, puis confirme. La base finale est identique à la base de référence : récompense 1.
+L'évaluation a été orchestrée avec LM Studio en connectant \taub{} à un modèle hébergé localement. Le protocole expérimental est fixé comme suit :
+\begin{itemize}[nosep]
+  \item \textbf{Modèle testé} : \texttt{Qwen3-14B} \cite{qwen3} en quantification \texttt{Q4\_K\_M}.
+  \item \textbf{Paramètres d'exécution} : fenêtre de contexte de 32\,768 tokens, déchargement GPU de 40 couches (\emph{offload}), pool de 10 threads CPU, température $\tau = 0{,}8$.
+  \item \textbf{Domaine et échantillonnage} : suite intégrale du domaine \texttt{airline} (50 tâches), évaluée sur $n = 3$ essais indépendants par tâche, soit 150 simulations complètes par condition expérimentale.
+  \item \textbf{Conditions testées} : (1) régime sans budget de raisonnement (\emph{None}), et (2) régime avec un budget de réflexion délibérative de 4\,096 tokens (\emph{Reasoning Budget = 4096}).
+\end{itemize}
 
-L'échec de \texttt{create\_task\_1} est plus instructif. L'utilisateur demande de créer une tâche intitulée « Important Meeting » pour \texttt{user\_1}. L'agent appelle
-\begin{center}\small
-\texttt{create\_task(user\_id="user\_1", title="Important Meeting", description="Track an upcoming meeting")}
-\end{center}
-puis confirme. L'utilisateur remercie et clôt la conversation, satisfait. La récompense est pourtant de 0. La trajectoire de référence appelle \texttt{create\_task} \emph{sans} le champ optionnel \texttt{description}. Les deux bases diffèrent donc d'un seul champ, et leurs \emph{hash} ne coïncident pas. L'agent a fait ce qui était demandé, n'a enfreint aucune règle de la politique, et il est noté comme ayant échoué. C'est un \emph{faux négatif} produit par la comparaison exacte des bases (section~\ref{sec:biais}).
+\subsection{Résultats : impact du budget de raisonnement}
 
-\paragraph{Un succès qui n'en est pas un : tâche \texttt{airline}~5.} Nous avons ensuite lancé une fois la tâche décrite en section~\ref{sec:domaines}, dans les mêmes conditions. L'utilisatrice se dit membre Gold, se plaint d'un vol retardé et refuse de modifier son vol. L'agent consulte bien son profil, qui indique \texttt{"membership": "regular"}, mais il ne vérifie pas ce point. Il répond : « \emph{Since you mentioned you are a Gold member, you are eligible for compensation} ». Il propose ensuite un certificat de 200\,\$ (50\,\$ $\times$ 4 passagers). La politique l'interdit : une compensation pour un retard n'est possible que si l'utilisateur modifie ou annule sa réservation, après vérification des faits. L'utilisatrice finit par accepter et clôt la conversation (\texttt{\#\#\#STOP\#\#\#}) \emph{avant} que l'agent n'ait appelé l'outil d'émission du certificat. La base n'a donc pas été modifiée et la récompense vaut 1.
+Le tableau~\ref{tab:qwen-reasoning} synthétise les performances comparées sur les 150 épisodes d'évaluation sur le modèle \texttt{Qwen3-14B}.
 
-Ce \emph{faux positif} fait pendant au faux négatif précédent. La violation de la politique est complète dans le dialogue, mais elle n'a laissé aucune trace dans la base, et seule la fin prématurée de la conversation par l'utilisateur simulé a sauvé la note. Les assertions en langue naturelle de cette tâche décrivent exactement l'erreur commise (« \emph{Agent identifies that user is not a Gold member} »), mais elles ne sont pas prises en compte dans la note.
+\begin{table}[H]
+  \centering\small
+  \resizebox{\linewidth}{!}{\input{tables/qwen_reasoning.tex}}
+  \caption{Performances comparées de \texttt{Qwen3-14B} sur le domaine \texttt{airline} (50 tâches, 3 essais, $N=150$) avec et sans budget de raisonnement (inférence locale LM Studio, température 0{,}8).}
+  \label{tab:qwen-reasoning}
+\end{table}
 
-\paragraph{Coût.} Avec \texttt{gpt-4.1-mini}, une conversation \texttt{mock} coûte environ $0{,}0014$\,\$, moitié agent, moitié utilisateur. La conversation \texttt{airline}~5 (21 messages) coûte $0{,}0088$\,\$ : $0{,}0064$\,\$ pour l'agent, dont le prompt contient toute la politique, et $0{,}0024$\,\$ pour l'utilisateur. Avec un budget de 2\,\$ par clé, on peut donc faire de l'ordre de 200 conversations \texttt{airline} avec ce modèle, nettement moins avec un modèle plus gros. Ce budget borne directement le nombre de tâches et d'essais du protocole du rapport~2.
+\noindent
+L'analyse quantitative met en évidence trois points majeurs :
+
+\paragraph{1. Une discipline accrue sur l'état de la base (+7 succès nets).}
+L'effet ressortant le plus concerne la concordance d'état système (\texttt{DB Match}) qui progresse de 32{,}2\,\% à 36{,}7\,\% (+4{,}5 points absolus, soit $+14{,}0\,\%$ relatif). Sans étape de réflexion interne, le modèle réactif déclenche immédiatement des appels d'outils d'écriture sans vérifier au préalable les règles d'éligibilité. Avec un budget de raisonnement de 4\,096 tokens, l'agent simule dans sa réflexion les contraintes de la politique avant d'exécuter un appel modifiant l'environnement, ce qui évite ainsi des écritures illégitimes et irréversibles.
+
+\paragraph{2. Un gain substantiel de fiabilité inter-essais ($\passk{2}$ et $\passk{3}$).}
+Si le taux de succès moyen $\passk{1}$ progresse de façon modérée ($+2{,}0$ points, passant de 30{,}67\,\% à 32{,}67\,\%), la fiabilité conjointe sur plusieurs essais indépendants subit un bond important :
+\begin{itemize}[nosep]
+  \item $\passk{2}$ augmente de \textbf{18{,}0\,\% à 21{,}3\,\%} ($+18{,}3\,\%$ relatif) ;
+  \item $\passk{3}$ passe de \textbf{12{,}0\,\% à 14{,}0\,\%} ($+16{,}7\,\%$ relatif).
+\end{itemize}
+
+\vspace{2mm}\noindent
+Ce résultat valide directement une sous-hypothèse centrale : le raisonnement délibératif atténue la dispersion stochastique inhérente à l'échantillonnage ($\tau = 0{,}8$) en stabilisant l'arbre décisionnel de l'agent. Les décisions justes deviennent significativement plus reproductibles.
+
+\paragraph{3. Fluidité conversationnelle intégrale.}
+Sous budget de raisonnement, 150 épisodes sur 150 s'achèvent sur une clôture normale de l'utilisateur (\texttt{Normal Stop}), réduisant les blocages par dépassement de pas (\texttt{Max Steps}) à zéro. L'agent maintient une cohérence conversationnelle sans boucle infinie.
+
+\subsection{Comprendre la complexité réelle : des 5 premières tâches à la suite complète}
+
+Sur les cinq premières tâches du domaine \texttt{airline}, l'agent affichait initialement un taux de réussite de 80\,\%. L'effondrement à $\approx 31$--$33\,\%$ sur l'ensemble des 50 tâches illustre l'hétérogénéité interne du benchmark :
+\begin{itemize}[nosep]
+  \item Les premières tâches consistent essentiellement en des requêtes de simple consultation d'horaires (\texttt{READ}) ou des refus directs sans impact d'état
+  \item La suite complète introduit des scénarios combinatoires : calculs de frais d'annulation proratisés selon la classe de billet, réacheminements multi-destinations, transferts de passagers entre réservations et pénalités de bagages excédentaires.
+\end{itemize}
+
+\vspace{2mm}\noindent
+Sans raisonnement, le modèle ne parvient pas à organiser ces séquences d'écriture complexes (seulement 29{,}2\,\% de complétion des écritures gold).
+
+\subsection{Micro-autopsie des trajectoires : faux négatifs et faux positifs}
+
+Les inspections individuelles de trajectoires menées sur les premiers essais illustrent les deux pathologies de mesure du benchmark :
+
+\paragraph{Le faux négatif par sur-spécification (tâche \texttt{mock/create\_task\_1}).} L'agent reçoit pour consigne de créer une tâche « Important Meeting ». Il appelle l'outil avec l'argument optionnel \texttt{description="Track an upcoming meeting"}. La trajectoire de référence omettant ce champ, les hachages finaux de la base divergent et la tâche est notée 0. L'agent a parfaitement répondu au besoin sans violer aucune règle mais est pénalisé par l'absence d'équivalence sémantique dans l'évaluation.
+
+\paragraph{Le faux positif par inertie conversationnelle (tâche \texttt{airline/5}).} Une utilisatrice prétend indûment être membre Gold et exige 200\,\$ d'indemnisation. L'agent consulte le profil, constate le statut réel (\texttt{regular}) mais valide oralement la demande interdite : « \emph{Since you mentioned you are a Gold member, you are eligible} ». Avant que l'agent n'appelle l'outil de versement, l'utilisateur simulé abrège l'échange (\texttt{\#\#\#STOP\#\#\#}). L'état n'ayant pas été altéré, l'agent reçoit la note maximale (1), masquant une violation manifeste de la politique d'indemnisation.

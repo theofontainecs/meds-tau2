@@ -1,12 +1,16 @@
-\section{Conclusion et suite du projet}
+\section{Conclusion et perspectives de recherche}
+\label{sec:conclusion}
 
-\taub{} évalue l'agent sur ce qu'il \emph{fait}, l'état final de l'environnement, plutôt que sur ce qu'il \emph{dit}. Cette approche est objective et reproductible, mais elle laisse de côté une part importante du comportement conversationnel. Le benchmark dépend aussi fortement de choix rarement explicités : modèle utilisateur, composition de \texttt{reward\_basis}, nombre d'essais. Une partie de ses tâches s'est d'ailleurs révélée erronée.
+Cette étude démontre que \taub{} évalue davantage la conformité d'un état final de base de données que la pertinence globale de l'interaction agent--utilisateur. Dans ce cadre, notre hypothèse de travail se vérifie partiellement : l'octroi d'un budget de raisonnement de 4\,096 tokens à \texttt{Qwen3-14B} renforce indéniablement la rigueur de l'agent, se traduisant par un gain net de concordance en base de données (+4{,}5 points) et une progression notable de la fiabilité inter-essais $\passk{2}$ ($+18{,}3\,\%$ relatif). 
 
-\paragraph{Pistes pour le rapport 2.}
-\todo{Questions de recherche candidates, à trier :}
-\begin{itemize}[nosep]
-  \item Quelle part de la variance du score vient de l'utilisateur simulé plutôt que de l'agent ? On peut tester en faisant varier le modèle utilisateur à agent fixé.
-  \item Combien d'essais faut-il pour séparer deux agents de manière significative ?
-  \item Les échecs relèvent-ils du raisonnement, de la politique ou de la communication ? On peut le mesurer par une annotation manuelle de trajectoires et par la comparaison avec le mode \emph{solo}.
-  \item Que changerait une notation qui tient compte de ce que l'agent dit, et non seulement de ce qu'il fait ?
-\end{itemize}
+\vspace{2mm}\noindent
+Néanmoins, l'observation d'un plafond autour de 33\,\% à 37\,\% révèle que le raisonnement seul ne peut compenser les contraintes de paramétrage (14B quantifié à 4 bits face à une combinatoire de règles volumineuse) ni les artefacts de mesure du benchmark (hachage aveugle pénalisant les enrichissements légitimes et variabilité du simulateur utilisateur).
+
+\paragraph{Programme expérimental pour la suite des travaux.}
+Pour dépasser ces limites et compléter le protocole de recherche, quatre axes prioritaires sont engagés :
+\begin{enumerate}[nosep]
+  \item \textbf{Ablation par le mode \emph{solo}} : évaluer l'agent en direct sur les objectifs sans passer par le dialogue utilisateur afin d'isoler la capacité de raisonnement pur du bruit conversationnel.
+  \item \textbf{Échelle de modèles et précision} : comparer les performances face à une version non quantifiée ou de taille supérieure (ex. 32B ou 70B) pour tester si la barrière des 40\,\% est d'ordre capacitaire ou inhérente à la formulation des tâches.
+  \item \textbf{Expérimentation en contrôle partagé (\emph{dual-control})} : déployer le protocole sur le domaine \texttt{telecom} pour mesurer l'impact du raisonnement dans un Dec-POMDP où l'agent doit guider l'utilisateur dans l'action.
+  \item \textbf{Autopsie des traces de pensée} : analyser qualitativement les tokens de raisonnement pour caractériser les points de rupture (vérification préventive réussie vs hallucinations arithmétiques).
+\end{enumerate}
