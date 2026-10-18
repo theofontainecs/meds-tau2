@@ -19,3 +19,5 @@ La récompense d'un essai est le \emph{produit} des composantes listées dans \t
 \end{itemize}
 Concrètement, \emph{un même score $\passk{1}$ ne recouvre donc pas la même notion de succès selon le domaine}.
 Nous avons vérifié que ces valeurs sont bien celles appliquées. La commande \texttt{tau2 run} utilise le mode d'évaluation \texttt{ALL}, qui respecte le \texttt{reward\_basis} de chaque tâche. Les modes qui l'ignorent (\texttt{ALL\_IGNORE\_BASIS}, etc.) ne servent qu'au débogage et ne sont pas exposés par défaut.
+
+\paragraph{Conséquence pour l'étude du raisonnement.} Cette notation a un effet ambivalent sur un agent qui raisonne avant d'agir. Elle récompense la prudence, puisqu'une écriture illégitime évitée suffit souvent à réussir. Elle pénalise en revanche toute initiative qui s'écarte de la trajectoire de référence, même légitime, par exemple un champ facultatif renseigné (section~\ref{sec:prise-en-main}). Un gain de score dû au raisonnement peut donc venir d'une meilleure application de la politique, mais aussi d'une simple tendance à moins écrire.

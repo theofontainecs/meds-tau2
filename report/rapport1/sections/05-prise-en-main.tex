@@ -1,5 +1,7 @@
-\section{Prise en main}
+\section{Prise en main et premiers essais}
 \label{sec:prise-en-main}
+
+\subsection{Installation et premiers essais avec \texttt{gpt-4.1-mini}}
 
 \paragraph{Installation.} Le dépôt \taub{} est inclus comme sous-module Git, figé au commit \texttt{b7ea907}, et installé avec \texttt{uv} sous Python 3.13. L'installation de base ne suffit pas : le code importe à l'initialisation un module vocal (\texttt{websockets}) qui ne figure pas dans les dépendances de base. Nous l'avons ajouté à la main. Les appels aux modèles passent par LiteLLM, vers le proxy du cours.
 
@@ -22,6 +24,52 @@ puis confirme. L'utilisateur remercie et clôt la conversation, satisfait. La r�
 
 Ce \emph{faux positif} fait pendant au faux négatif précédent. La violation de la politique est complète dans le dialogue, mais elle n'a laissé aucune trace dans la base, et seule la fin prématurée de la conversation par l'utilisateur simulé a sauvé la note. Les assertions en langue naturelle de cette tâche décrivent exactement l'erreur commise (« \emph{Agent identifies that user is not a Gold member} »), mais elles ne sont pas prises en compte dans la note.
 
-\paragraph{Essai préliminaire avec un modèle local.} En parallèle, nous avons fait tourner un modèle ouvert de 14 milliards de paramètres (Qwen3.8 14B) en local sur GPU, comme agent sur le domaine \texttt{airline}. Il obtient un taux de succès de 30,7\,\%, et d'environ 33\,\% avec un budget de raisonnement de 4096 tokens. L'article n'évalue aucun modèle de cette taille. Ce résultat montre qu'un petit modèle exécuté localement parvient à utiliser les outils et à suivre une partie de la politique. Il ouvre aussi une voie pour nos expériences : le coût en dollars disparaît, et on mesure à la place les tokens consommés. Nous ne tirons en revanche aucune conclusion de l'écart entre les deux configurations, qui est inférieur à l'erreur standard sur 50 tâches. Ces deux scores sont de plus inférieurs au score théorique d'un agent qui n'écrirait jamais rien, soit 46\,\% (section~\ref{sec:biais}). Il échoue donc en moyenne sur au moins 8 des 23 tâches où il suffisait de ne rien modifier : il y effectue des écritures injustifiées, ou subit une erreur du simulateur. L'analyse des trajectoires devra trancher entre ces deux causes. Deux limites pratiques sont apparues : ces modèles ont une fenêtre de contexte réduite, que le raisonnement peut saturer, et l'exécution est lente.
+\paragraph{Coût.} Avec \texttt{gpt-4.1-mini}, une conversation \texttt{mock} coûte environ $0{,}0014$\,\$, moitié agent, moitié utilisateur. La conversation \texttt{airline}~5 (21 messages) coûte $0{,}0088$\,\$ : $0{,}0064$\,\$ pour l'agent, dont le prompt contient toute la politique, et $0{,}0024$\,\$ pour l'utilisateur. Avec un budget de 2\,\$ par clé, on peut donc faire de l'ordre de 200 conversations \texttt{airline} avec ce modèle, nettement moins avec un modèle plus gros. Ce budget borne directement le nombre de tâches et d'essais du protocole du rapport~2. C'est ce qui nous a conduits à essayer un modèle exécuté en local.
 
-\paragraph{Coût.} Avec \texttt{gpt-4.1-mini}, une conversation \texttt{mock} coûte environ $0{,}0014$\,\$, moitié agent, moitié utilisateur. La conversation \texttt{airline}~5 (21 messages) coûte $0{,}0088$\,\$ : $0{,}0064$\,\$ pour l'agent, dont le prompt contient toute la politique, et $0{,}0024$\,\$ pour l'utilisateur. Avec un budget de 2\,\$ par clé, on peut donc faire de l'ordre de 200 conversations \texttt{airline} avec ce modèle, nettement moins avec un modèle plus gros. Ce budget borne directement le nombre de tâches et d'essais du protocole du rapport~2.
+\subsection{Premier essai contrôlé : effet d'un budget de raisonnement}
+\label{sec:qwen}
+
+Pour éprouver l'hypothèse de l'introduction sans contrainte de budget, nous avons connecté \taub{} à un modèle ouvert servi en local par LM Studio. L'inférence locale supprime le coût en dollars et donne la main sur tous les paramètres d'inférence.
+
+\paragraph{Protocole.}
+\begin{itemize}[nosep]
+  \item \textbf{Modèle} : \texttt{Qwen3-14B} \cite{qwen3}, quantifié en \texttt{Q4\_K\_M}, à la fois comme agent et comme utilisateur simulé.
+  \item \textbf{Inférence} : fenêtre de contexte de 32\,768 tokens, 40 couches déchargées sur GPU, 10 threads CPU, température 0,8.
+  \item \textbf{Échantillon} : les 50 tâches \texttt{airline}, 3 essais par tâche, soit 150 simulations par condition.
+  \item \textbf{Conditions} : (1) sans budget de raisonnement ; (2) avec un budget de raisonnement de 4\,096 tokens.
+\end{itemize}
+L'article n'évalue aucun modèle de cette taille.
+
+\begin{table}[H]
+  \centering\small
+  \resizebox{\linewidth}{!}{\input{tables/qwen_reasoning.tex}}
+  \caption{\texttt{Qwen3-14B} sur \texttt{airline} (50 tâches, 3 essais, $N=150$ par condition), sans et avec budget de raisonnement (inférence locale LM Studio, température 0,8). Les lignes \texttt{READ} et \texttt{WRITE} comptent les actions de référence effectivement réalisées par l'agent. Simulations dans \texttt{results/simulations/}.}
+  \label{tab:qwen-reasoning}
+\end{table}
+
+\paragraph{Observations.} Le tableau~\ref{tab:qwen-reasoning} montre des écarts qui vont tous dans le sens de l'hypothèse :
+\begin{itemize}[nosep]
+  \item la concordance de la base finale passe de 48 à 55 simulations (32,2\,\% à 36,7\,\%), soit 7 succès nets ;
+  \item $\passk{1}$ passe de 30,7\,\% à 32,7\,\% (46 puis 49 succès sur 150) ;
+  \item $\passk{2}$ passe de 18,0\,\% à 21,3\,\% et $\passk{3}$ de 12,0\,\% à 14,0\,\% : le gain relatif sur la fiabilité ($+18$\,\% pour $\passk{2}$) est plus fort que sur le taux de succès moyen ($+6{,}5$\,\%) ;
+  \item avec raisonnement, les 150 conversations se terminent normalement, contre 149 sans (une conversation atteint le nombre maximal de tours).
+\end{itemize}
+Une interprétation possible est que le raisonnement aide l'agent à vérifier les règles douces avant d'écrire (section~\ref{sec:outils}), et rend ses bonnes décisions plus reproductibles d'un essai à l'autre.
+
+\paragraph{Ce que ces chiffres permettent de conclure.} Peu de choses à ce stade, pour trois raisons.
+\begin{itemize}[nosep]
+  \item \textbf{Les écarts ne sont pas significatifs.} Un test de comparaison de deux proportions donne $z \approx 0{,}37$ pour $\passk{1}$ et $z \approx 0{,}81$ pour la concordance de la base, loin du seuil de 1,96. Ce test traite de plus les 150 simulations comme indépendantes alors que les 3 essais d'une même tâche sont corrélés, ce qui surestime la taille effective de l'échantillon. Un test apparié par tâche, que permettent les simulations sauvegardées, est nécessaire.
+  \item \textbf{Les deux scores restent sous la référence de l'agent passif.} Un agent qui n'écrirait jamais rien obtiendrait en théorie 46\,\% (section~\ref{sec:biais}). Avec 30 à 33\,\%, l'agent échoue en moyenne sur au moins 7 à 8 des 23 tâches où il suffisait de ne rien modifier : il y effectue des écritures injustifiées, ou subit une erreur du simulateur. Seule l'analyse des trajectoires permettra de trancher. Ce constat relativise aussi la hausse de la concordance de la base : elle peut venir d'un agent qui applique mieux la politique, ou simplement d'un agent qui écrit moins (section~\ref{sec:evaluation}).
+  \item \textbf{L'agent et l'utilisateur sont le même modèle.} L'écart mesuré mêle donc un éventuel effet du raisonnement sur l'agent et un effet sur le comportement de l'utilisateur simulé, dont dépend la difficulté de chaque conversation.
+\end{itemize}
+
+\paragraph{Hétérogénéité des tâches.} Sur les cinq premières tâches \texttt{airline}, utilisées pour la mise au point, l'agent réussissait 80\,\% des essais. La chute à 31--33\,\% sur l'ensemble des 50 tâches illustre l'hétérogénéité du domaine. Les premières tâches demandent surtout des lectures ou des refus sans effet sur la base. La suite introduit des scénarios combinatoires : frais d'annulation selon la classe, réacheminements sur plusieurs segments, changements de passagers, bagages supplémentaires. Sans raisonnement, l'agent ne réalise que 29\,\% des écritures de référence. Un sous-ensemble de tâches choisi pour son faible coût n'est donc pas représentatif, ce dont le protocole du rapport~2 devra tenir compte.
+
+\paragraph{Pistes d'explication du plafond observé.} Plusieurs facteurs, que nous ne savons pas encore séparer, peuvent expliquer que l'agent plafonne autour d'un tiers de réussite :
+\begin{itemize}[nosep]
+  \item \textbf{la taille du modèle} : la politique \texttt{airline} compte plus de 1\,300 mots de règles conditionnelles qui se combinent. Un modèle de 14 milliards de paramètres a probablement plus de mal qu'un modèle de pointe à croiser ces règles et à faire les calculs de frais ;
+  \item \textbf{la quantification à 4 bits}, qui peut dégrader la précision des calculs et des arguments d'outils ;
+  \item \textbf{la fenêtre de contexte}, que la politique, l'historique et le raisonnement se partagent : un budget de raisonnement élevé peut la saturer ;
+  \item \textbf{l'utilisateur simulé}, lui aussi un modèle de 14 milliards de paramètres, qui peut omettre une information, contredire son scénario ou clore la conversation trop tôt.
+\end{itemize}
+Les comparaisons proposées en conclusion (mode \emph{solo}, modèle plus grand ou non quantifié, utilisateur fixé) visent à isoler ces facteurs. Sur le plan pratique, l'exécution locale est lente, mais elle permet de mesurer les tokens consommés plutôt qu'un coût en dollars.

@@ -1,14 +1,18 @@
 \section{Introduction}
 
-Un LLM n'est plus seulement un générateur de texte : il appelle des outils, agit sur des systèmes d'information et enchaîne ces actions dans une boucle « raisonner, agir, observer » \cite{yao2023react}. On l'appelle alors un \emph{agent}. Évaluer un agent pose des difficultés que l'évaluation classique d'un modèle ne connaît pas :
+Un LLM n'est plus seulement un générateur de texte : il appelle des outils, inspecte et modifie des bases de données, et enchaîne ces actions dans une boucle « raisonner, agir, observer » \cite{yao2023react}. On l'appelle alors un \emph{agent}. Évaluer un agent pose des difficultés que l'évaluation classique d'un modèle ne connaît pas :
 \begin{itemize}[nosep]
   \item la sortie n'est pas une réponse unique mais une \emph{trajectoire} (messages, appels d'outils, modifications d'état) ;
-  \item le comportement est stochastique et dépend de l'interlocuteur ;
+  \item le comportement est stochastique et dépend d'un interlocuteur lui-même stochastique ;
   \item une erreur a des conséquences sur le monde, par exemple un remboursement injustifié ou une annulation non demandée.
 \end{itemize}
 
-\taub{} \cite{barres2025tau2}, développé par Sierra Research, prolonge $\tau$-bench \cite{yao2024taubench}. Il simule des conversations de service client entre un agent évalué et un utilisateur simulé par un LLM, dans plusieurs domaines (compagnie aérienne, vente en ligne, opérateur télécom, banque). Sa principale nouveauté est le cadre \emph{dual-control} du domaine télécom : l'utilisateur dispose lui aussi d'outils, et l'agent doit le guider pour qu'il agisse sur son propre appareil.
+\taub{} \cite{barres2025tau2}, développé par Sierra Research, prolonge $\tau$-bench \cite{yao2024taubench}. Il simule des conversations de service client entre un agent évalué et un utilisateur simulé par un LLM, dans plusieurs domaines à fortes contraintes métier (compagnie aérienne, vente en ligne, opérateur télécom, banque). Sa principale nouveauté est le cadre \emph{dual-control} du domaine télécom : l'utilisateur dispose lui aussi d'outils, et l'agent doit le guider pour qu'il agisse sur son propre appareil.
 
-\paragraph{Objectif du projet.} Il ne s'agit pas d'obtenir le meilleur score. Nous voulons comprendre \emph{ce que le benchmark mesure réellement}, puis concevoir un protocole d'évaluation rigoureux, l'appliquer à deux ou trois agents simples et en rendre compte de façon critique et traçable. Ce premier rapport pose les bases : description du benchmark (sections~\ref{sec:benchmark} à \ref{sec:evaluation}), prise en main (section~\ref{sec:prise-en-main}), puis biais et limites (section~\ref{sec:biais}).
+\paragraph{Objectif du projet.} Il ne s'agit pas d'obtenir le meilleur score. Nous voulons comprendre \emph{ce que le benchmark mesure réellement} : le score reflète-t-il la compétence de l'agent, ou des artefacts de la simulation et de la notation ? Nous voulons ensuite concevoir un protocole d'évaluation rigoureux, l'appliquer à deux ou trois agents simples et en rendre compte de façon critique et traçable.
 
-\paragraph{Traçabilité.} Toutes les observations portent sur le dépôt officiel \cite{tau2repo} figé au commit \texttt{b7ea907} (version 1.0.1). Les statistiques sont produites par \texttt{code/domain\_stats.py} dans notre dépôt.
+\paragraph{Une hypothèse à tester : l'effet du raisonnement.} Les modèles récents peuvent consacrer un budget de tokens à une phase de raisonnement interne avant de répondre (\emph{reasoning models}, \emph{test-time compute}). Une hypothèse répandue veut que ce temps de calcul améliore nettement les agents outillés : il permettrait de vérifier les préconditions de la politique avant d'appeler un outil, de planifier les actions en plusieurs étapes et de résister à un utilisateur qui insiste. Cette hypothèse est un bon cas d'étude pour notre question de fond : pour la tester, il faut savoir ce que le score mesure, et si un écart observé dépasse le bruit du benchmark.
+
+\paragraph{Contenu du rapport.} Ce premier rapport décrit le benchmark (sections~\ref{sec:benchmark} à \ref{sec:evaluation}). Il rend compte de notre prise en main, dont un premier essai contrôlé de l'hypothèse ci-dessus avec \texttt{Qwen3-14B} exécuté en local (section~\ref{sec:prise-en-main}). Il analyse enfin les biais et les limites du benchmark (section~\ref{sec:biais}).
+
+\paragraph{Traçabilité.} Toutes les observations portent sur le dépôt officiel \cite{tau2repo} figé au commit \texttt{b7ea907} (version 1.0.1). Les statistiques sont produites par \texttt{code/domain\_stats.py} dans notre dépôt, et chaque simulation citée est versionnée dans \texttt{results/} avec la commande qui l'a produite.

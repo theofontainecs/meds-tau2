@@ -45,7 +45,7 @@ Une tâche (\texttt{tasks.json}) comprend :
 
 Les outils sont des méthodes Python décorées par \texttt{@is\_tool}. Le décorateur les classe en lecture (\texttt{READ}), écriture (\texttt{WRITE}) ou autre (\texttt{GENERIC}, par exemple le transfert vers un humain). Leur docstring sert de description en langue naturelle transmise à l'agent.
 
-Nous avons comparé les règles de la politique \texttt{airline} aux vérifications présentes dans le code des outils. Les outils vérifient l'\emph{intégrité des données} :
+Nous avons comparé les règles de la politique \texttt{airline} aux vérifications présentes dans le code des outils. Elles se répartissent en deux catégories. Les \emph{règles dures} sont vérifiées par l'outil, qui lève une exception : l'agent est immédiatement averti que son appel est invalide. Les \emph{règles douces} sont laissées au jugement de l'agent : l'outil accepte l'écriture, et seule l'évaluation finale peut révéler la violation. Les règles dures portent sur l'\emph{intégrité des données} :
 \begin{itemize}[nosep]
   \item existence de l'utilisateur, de la réservation et du vol ;
   \item places disponibles et vol réservable à la date demandée ;
@@ -53,7 +53,7 @@ Nous avons comparé les règles de la politique \texttt{airline} aux vérificati
   \item nombre de passagers inchangé lors d'une modification ;
   \item certificat inutilisable pour payer une modification.
 \end{itemize}
-En revanche, nous n'avons trouvé \emph{aucune} vérification des règles métier :
+En revanche, \emph{toutes} les règles métier sont douces : nous n'avons trouvé aucune vérification dans le code pour les suivantes.
 \begin{itemize}[nosep]
   \item conditions d'annulation ;
   \item interdiction de modifier un billet \emph{basic economy} ;
@@ -61,4 +61,4 @@ En revanche, nous n'avons trouvé \emph{aucune} vérification des règles métie
   \item franchise de bagages ;
   \item obligation de confirmation avant écriture.
 \end{itemize}
-La politique l'assume explicitement (« \emph{The API does not check that cancellation rules are met} »). Le benchmark mesure donc précisément ce que l'agent fait \emph{quand rien ne l'empêche de mal faire}. C'est l'objectif recherché, mais cela signifie aussi qu'une erreur de l'agent n'est sanctionnée que si elle laisse une trace dans la base (section~\ref{sec:biais}).
+La politique l'assume explicitement (« \emph{The API does not check that cancellation rules are met} »). Le benchmark mesure donc précisément ce que l'agent fait \emph{quand rien ne l'empêche de mal faire}. C'est l'objectif recherché, mais cela signifie aussi qu'une erreur de l'agent n'est sanctionnée que si elle laisse une trace dans la base (section~\ref{sec:biais}). C'est aussi sur ces règles douces qu'un budget de raisonnement devrait aider, s'il aide : vérifier une condition d'éligibilité avant d'écrire est exactement ce que le raisonnement préalable est censé permettre (section~\ref{sec:qwen}).
